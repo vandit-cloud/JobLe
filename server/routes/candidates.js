@@ -44,6 +44,10 @@ router.post("/upload", auth, upload.array("resumes", 50), async (req, res) => {
             phone: parsed.phone || "",
             location: parsed.location || "",
             skills: parsed.skills || [],
+            summary: parsed.summary || "",
+            experience: parsed.experience || [],
+            education: parsed.education || [],
+            parsedBy: parsed.source || "", // /parse calls the tier "source"
             resumeText: parsed.resumeText || "",
             sourceFilename: file.originalname,
           };
@@ -127,8 +131,8 @@ router.get("/:id", auth, async (req, res) => {
 
 // ── GENERATE an AI test from a STORED candidate ────────────────
 // POST /api/candidates/:id/generate-test — uses the stored resumeText, so it
-// works long after the original file is gone. Returns the same draft shape
-// as /api/resume/generate-test for the TestForm pre-fill flow.
+// works long after the original file is gone. Returns the draft { questions,
+// source, skillsCovered } that the TestForm pre-fill flow expects.
 router.post("/:id/generate-test", auth, async (req, res) => {
   try {
     const candidate = await Candidate.findOne({

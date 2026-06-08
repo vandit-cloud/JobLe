@@ -78,6 +78,10 @@ router.post("/:jobId/apply", upload.single("resume"), async (req, res) => {
       phone: parsed.phone || "",
       location: parsed.location || "",
       skills: parsed.skills || [],
+      summary: parsed.summary || "",
+      experience: parsed.experience || [],
+      education: parsed.education || [],
+      parsedBy: parsed.source || "", // /parse calls the tier "source"
       resumeText: parsed.resumeText || "",
       sourceFilename: req.file.originalname,
       source: "self-applied", // vs the default "recruiter-upload"

@@ -35,9 +35,6 @@ app.use("/api/auth", require("./routes/auth"));
 // All routes starting with /api/tests are handled by our tests router.
 app.use("/api/tests", require("./routes/tests"));
 
-// Resume upload/analysis — forwards to the Python parser service.
-app.use("/api/resume", require("./routes/resume"));
-
 // Job openings (recruiter CRUD) + resume-to-job match scoring.
 app.use("/api/jobs", require("./routes/jobs"));
 

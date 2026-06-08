@@ -25,6 +25,23 @@ const candidateSchema = new mongoose.Schema(
     location: { type: String, trim: true, default: "" },
     skills: { type: [String], default: [] },
 
+    // Richer parsed profile (from the Python /parse response). Stored so the
+    // talent pool can show a full candidate detail without re-parsing the file —
+    // the parse-once principle done properly (these used to be extracted then
+    // thrown away). _id:false: these are plain value rows, not their own docs.
+    summary: { type: String, default: "" },
+    experience: {
+      type: [{ company: String, role: String, duration: String, _id: false }],
+      default: [],
+    },
+    education: {
+      type: [{ institution: String, degree: String, year: String, _id: false }],
+      default: [],
+    },
+    // Which dispatcher tier parsed this resume: "groq" | "local-model" | "regex".
+    // Distinct from `source` below (which is how the candidate ENTERED the pool).
+    parsedBy: { type: String, default: "" },
+
     // The full plain text extracted from the resume file. Stored so we can
     // re-match against NEW jobs (and generate AI tests) months later without
     // needing the original file again.

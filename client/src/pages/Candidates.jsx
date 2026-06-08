@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   uploadCandidates,
@@ -21,6 +21,7 @@ function Candidates() {
   const [uploading, setUploading] = useState(false);
   const [generatingFor, setGeneratingFor] = useState(null); // candidate id
   const [jobFilter, setJobFilter] = useState(""); // "" = show whole pool
+  const [expandedId, setExpandedId] = useState(null); // which row is expanded
   const navigate = useNavigate();
 
   function load() {
@@ -55,6 +56,19 @@ function Candidates() {
     if (score >= 70) return "bg-emerald-50 text-emerald-700";
     if (score >= 40) return "bg-amber-50 text-amber-700";
     return "bg-red-50 text-red-700";
+  }
+
+  // Which dispatcher tier parsed this resume. Returns null for candidates
+  // stored before we recorded it, so we just hide the badge for them.
+  function parseBadge(parsedBy) {
+    if (!parsedBy) return null;
+    if (parsedBy === "groq") return "✨ AI parsed";
+    if (parsedBy === "local-model") return "🧠 our model";
+    return "basic parse";
+  }
+
+  function toggleExpand(id) {
+    setExpandedId(expandedId === id ? null : id);
   }
 
   async function handleUpload(e) {
@@ -221,8 +235,16 @@ function Candidates() {
             </thead>
             <tbody>
               {filtered.map((c) => (
-                <tr key={c._id} className="border-t border-slate-100">
+                <Fragment key={c._id}>
+                  <tr className="border-t border-slate-100">
                   <td className="px-4 py-3 font-medium">
+                    <button
+                      onClick={() => toggleExpand(c._id)}
+                      className="mr-2 text-slate-400 hover:text-slate-600"
+                      title={expandedId === c._id ? "Hide details" : "Show details"}
+                    >
+                      {expandedId === c._id ? "▾" : "▸"}
+                    </button>
                     {c.name || <span className="text-slate-400">unknown</span>}
                     {c.source === "self-applied" && (
                       <span className="ml-2 rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700">
@@ -291,7 +313,82 @@ function Candidates() {
                       Delete
                     </button>
                   </td>
-                </tr>
+                  </tr>
+
+                  {/* The full parsed profile — the rich view that used to only
+                      live on the standalone Resume-parser page. */}
+                  {expandedId === c._id && (
+                    <tr className="bg-slate-50/60">
+                      <td colSpan={6} className="px-4 py-4">
+                        <div className="flex flex-wrap items-center gap-3">
+                          {parseBadge(c.parsedBy) && (
+                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                              {parseBadge(c.parsedBy)}
+                            </span>
+                          )}
+                          {c.phone && (
+                            <span className="text-xs text-slate-500">
+                              📞 {c.phone}
+                            </span>
+                          )}
+                          {c.location && (
+                            <span className="text-xs text-slate-500">
+                              📍 {c.location}
+                            </span>
+                          )}
+                        </div>
+
+                        {c.summary && (
+                          <p className="mt-3 text-sm text-slate-600">
+                            {c.summary}
+                          </p>
+                        )}
+
+                        {c.experience && c.experience.length > 0 && (
+                          <div className="mt-3">
+                            <p className="mb-1 text-xs font-medium text-slate-500">
+                              Experience
+                            </p>
+                            <ul className="space-y-1 text-sm text-slate-700">
+                              {c.experience.map((x, i) => (
+                                <li key={i}>
+                                  {[x.role, x.company, x.duration]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {c.education && c.education.length > 0 && (
+                          <div className="mt-3">
+                            <p className="mb-1 text-xs font-medium text-slate-500">
+                              Education
+                            </p>
+                            <ul className="space-y-1 text-sm text-slate-700">
+                              {c.education.map((x, i) => (
+                                <li key={i}>
+                                  {[x.degree, x.institution, x.year]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {!c.summary &&
+                          !(c.experience && c.experience.length) &&
+                          !(c.education && c.education.length) && (
+                            <p className="mt-3 text-sm text-slate-400">
+                              No further details were extracted from this resume.
+                            </p>
+                          )}
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>

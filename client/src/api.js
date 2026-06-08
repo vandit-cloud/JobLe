@@ -127,47 +127,6 @@ export async function deleteTest(id) {
   return res.json();
 }
 
-// ── analyzeResume ──────────────────────────────────────────────
-// Uploads a resume FILE (multipart) to POST /api/resume/analyze, which forwards
-// it to the Python parser service. Returns { email, phone, skills, textLength }.
-export async function analyzeResume(file) {
-  const form = new FormData();
-  form.append("resume", file); // "resume" MUST match multer's upload.single("resume")
-
-  const res = await fetch(`${API_URL}/resume/analyze`, {
-    method: "POST",
-    // IMPORTANT: do NOT set Content-Type here. For multipart uploads the
-    // browser must set it itself (it includes a random "boundary" marker);
-    // setting it by hand breaks the upload. We still send the auth header.
-    headers: { ...authHeaders() },
-    body: form,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "Failed to analyze resume");
-  }
-  return res.json();
-}
-
-// ── generateTestFromResume ─────────────────────────────────────
-// Uploads a resume and asks the backend to DRAFT a test from it (POST
-// /api/resume/generate-test → Python). Returns { questions, source, skillsCovered }.
-export async function generateTestFromResume(file) {
-  const form = new FormData();
-  form.append("resume", file); // same field name multer expects
-
-  const res = await fetch(`${API_URL}/resume/generate-test`, {
-    method: "POST",
-    headers: { ...authHeaders() }, // again: NO manual Content-Type for uploads
-    body: form,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "Failed to generate test");
-  }
-  return res.json();
-}
-
 // ── Jobs ────────────────────────────────────────────────────────
 export async function getJobs() {
   const res = await fetch(`${API_URL}/jobs`, { headers: { ...authHeaders() } });
@@ -303,7 +262,7 @@ export async function deleteCandidate(id) {
 }
 
 // Draft an AI test from a STORED candidate's resume text — no file needed,
-// works long after upload. Same draft shape as generateTestFromResume.
+// works long after upload. Returns { questions, source, skillsCovered }.
 export async function generateTestFromCandidate(id) {
   const res = await fetch(`${API_URL}/candidates/${id}/generate-test`, {
     method: "POST",

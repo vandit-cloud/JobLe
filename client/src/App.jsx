@@ -11,7 +11,6 @@ import CreateTest from "./pages/CreateTest";
 import TakeTest from "./pages/TakeTest";
 import Results from "./pages/Results";
 import EditTest from "./pages/EditTest";
-import ResumeUpload from "./pages/ResumeUpload";
 import Jobs from "./pages/Jobs";
 import MatchResume from "./pages/MatchResume";
 import BulkMatch from "./pages/BulkMatch";
@@ -79,15 +78,10 @@ function App() {
             <Link to="/" className="text-sm text-slate-600 hover:text-blue-600">
               Tests
             </Link>
-            {/* "Create Test" used to live here too — removed to declutter the
-                nav. The "+ New test" button on the Tests page is the single
-                entry for a blank test; AI drafts reach /create on their own. */}
-            <Link
-              to="/resume"
-              className="text-sm text-slate-600 hover:text-blue-600"
-            >
-              Resume parser
-            </Link>
+            {/* "Create Test" and "Resume parser" both used to live here.
+                Create Test → the "+ New test" button on the Tests page.
+                Resume parser → folded into Candidates (upload + expandable
+                profile), so resumes always become stored candidates. */}
             <Link
               to="/jobs"
               className="text-sm text-slate-600 hover:text-blue-600"
@@ -207,14 +201,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <EditTest />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/resume"
-            element={
-              <ProtectedRoute>
-                <ResumeUpload />
               </ProtectedRoute>
             }
           />
