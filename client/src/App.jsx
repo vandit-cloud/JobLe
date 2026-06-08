@@ -79,12 +79,9 @@ function App() {
             <Link to="/" className="text-sm text-slate-600 hover:text-blue-600">
               Tests
             </Link>
-            <Link
-              to="/create"
-              className="text-sm text-slate-600 hover:text-blue-600"
-            >
-              + Create Test
-            </Link>
+            {/* "Create Test" used to live here too — removed to declutter the
+                nav. The "+ New test" button on the Tests page is the single
+                entry for a blank test; AI drafts reach /create on their own. */}
             <Link
               to="/resume"
               className="text-sm text-slate-600 hover:text-blue-600"
