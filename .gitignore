@@ -1,0 +1,47 @@
+# ── Dependencies (huge, re-installable with `npm install` — never commit) ──
+node_modules/
+
+# ── Secrets (NEVER commit these — they hold passwords & keys) ──
+.env
+*.env
+!*.env.example
+
+# ── Build output (generated, not source code) ──
+dist/
+build/
+
+# ── Logs & OS junk ──
+*.log
+.DS_Store
+Thumbs.db
+
+# ── Python virtual environments (re-installable from requirements.txt) ──
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+
+# ── Trained ML models & checkpoints (HUGE — kept local, regenerated from training script) ──
+trained-model/
+trained-model-*/
+*.pt
+*.bin
+*.safetensors
+*.onnx
+
+# ── Stray large binaries that break GitHub's 100MB limit ──
+*.dll
+*.lib
+*.so
+*.dylib
+
+# ── Editor / IDE ──
+.vscode/
+.idea/
+
+# ── Claude Code per-developer local settings (not shared) ──
+.claude/settings.local.json
+
+# ── Personal study notes / course PDFs (kept local, not for the team repo) ──
+study/

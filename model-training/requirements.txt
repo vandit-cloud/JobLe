@@ -1,0 +1,3 @@
+# Phase 1 — data collection only. Light, no GPU.
+groq
+python-dotenv

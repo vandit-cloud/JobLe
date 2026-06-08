@@ -1,0 +1,14 @@
+# Virtual environment
+.venv/
+venv/
+
+# Secrets
+.env
+
+# Cache
+__pycache__/
+*.pyc
+
+# Generated data + trained models (can be large; regenerate instead of commit)
+*.jsonl
+trained-model/

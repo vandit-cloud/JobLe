@@ -1,0 +1,3 @@
+/* This single line pulls in all of Tailwind's styling utilities.
+   Now we can style elements with class names like "bg-blue-600" or "p-4". */
+@import "tailwindcss";

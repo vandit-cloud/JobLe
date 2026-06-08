@@ -1,0 +1,15 @@
+# Phase 2 — training (install LATER, when we reach the fine-tune step).
+#
+# IMPORTANT: install PyTorch SEPARATELY first, using the CUDA build so it uses
+# your RTX 3050 GPU (the default `pip install torch` is CPU-only). Get the exact
+# command from https://pytorch.org — for CUDA 12.1 it is:
+#
+#   pip install torch --index-url https://download.pytorch.org/whl/cu121
+#
+# Verify it sees the GPU:  python -c "import torch; print(torch.cuda.is_available())"  -> True
+#
+# Then install the rest:
+transformers
+datasets
+seqeval
+accelerate

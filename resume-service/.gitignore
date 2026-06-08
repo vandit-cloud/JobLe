@@ -1,0 +1,10 @@
+# Python virtual environment (the equivalent of node_modules — never commit it)
+.venv/
+venv/
+
+# Byte-compiled / cache
+__pycache__/
+*.pyc
+
+# Secrets — NEVER commit the API key
+.env
