@@ -93,6 +93,23 @@ router.get("/", auth, async (req, res) => {
   }
 });
 
+// ── ALL my candidates' job matches (for the talent-pool job tags) ──
+// GET /api/candidates/matches — every Match this recruiter owns, each carrying
+// its job's title and which candidate it belongs to. The Candidates page joins
+// these by candidate id (same client-side join as the assignment badges) to tag
+// each person with the job(s) they applied to / were matched against.
+// IMPORTANT: declared BEFORE "/:id" — otherwise Express reads "matches" as an id.
+router.get("/matches", auth, async (req, res) => {
+  try {
+    const matches = await Match.find({ owner: req.user.id })
+      .populate("job", "title")
+      .select("candidate job matchScore");
+    res.json(matches);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── GET one candidate (full, including resumeText) ─────────────
 router.get("/:id", auth, async (req, res) => {
   try {

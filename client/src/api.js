@@ -282,6 +282,17 @@ export async function getCandidates() {
   return res.json();
 }
 
+// Every job-match for my candidates → [{ _id, candidate, job:{_id,title}, matchScore }].
+// candidate is the raw id (not populated); the Candidates page joins by it to
+// show, on each row, which job(s) that person applied to / was matched against.
+export async function getCandidateMatches() {
+  const res = await fetch(`${API_URL}/candidates/matches`, {
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok) throw new Error("Failed to load candidate matches");
+  return res.json();
+}
+
 export async function deleteCandidate(id) {
   const res = await fetch(`${API_URL}/candidates/${id}`, {
     method: "DELETE",

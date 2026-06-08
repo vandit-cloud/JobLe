@@ -6,6 +6,7 @@ import {
   deleteCandidate,
   generateTestFromCandidate,
   getAssignments,
+  getCandidateMatches,
 } from "../api";
 
 // Recruiter page: the stored TALENT POOL. Resumes uploaded here are parsed
@@ -14,10 +15,12 @@ import {
 function Candidates() {
   const [candidates, setCandidates] = useState(null);
   const [assignments, setAssignments] = useState([]); // sent-test status rows
+  const [matches, setMatches] = useState([]); // job-match rows (for the job tags)
   const [files, setFiles] = useState([]);
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
   const [generatingFor, setGeneratingFor] = useState(null); // candidate id
+  const [jobFilter, setJobFilter] = useState(""); // "" = show whole pool
   const navigate = useNavigate();
 
   function load() {
@@ -28,12 +31,30 @@ function Candidates() {
     getAssignments()
       .then(setAssignments)
       .catch(() => {}); // status badges are optional decoration — don't block the page
+    // Job matches let us tag each person with the job(s) they relate to.
+    getCandidateMatches()
+      .then(setMatches)
+      .catch(() => {}); // also decoration — never block the pool over it
   }
   useEffect(load, []);
 
   // The LATEST assignment for one candidate (list is sorted newest-first).
   function assignmentFor(candidateId) {
     return assignments.find((a) => a.candidate?._id === candidateId);
+  }
+
+  // Every job this candidate applied to / was matched against. We join by id
+  // (the endpoint returns candidate as a raw id, not populated).
+  function matchesFor(candidateId) {
+    return matches.filter((m) => m.candidate === candidateId);
+  }
+
+  // Tag colour by fit: green strong, amber middling, red weak — same bands as
+  // the Applicants page so a 75% reads the same everywhere.
+  function chipColor(score) {
+    if (score >= 70) return "bg-emerald-50 text-emerald-700";
+    if (score >= 40) return "bg-amber-50 text-amber-700";
+    return "bg-red-50 text-red-700";
   }
 
   async function handleUpload(e) {
@@ -101,6 +122,21 @@ function Candidates() {
     }
   }
 
+  // Jobs to offer in the filter dropdown — only those that actually have
+  // matched candidates (a unique list pulled from the match rows). Filtering
+  // by a job nobody matches would just show an empty table, so we don't list it.
+  const jobOptions = Array.from(
+    new Map(matches.filter((m) => m.job).map((m) => [m.job._id, m.job.title]))
+  ).map(([id, title]) => ({ id, title }));
+
+  // The rows to actually show: the whole pool, or just those matched to the
+  // selected job. matchesFor() is the same join the tags use.
+  const filtered = !jobFilter
+    ? candidates || []
+    : (candidates || []).filter((c) =>
+        matchesFor(c._id).some((m) => m.job?._id === jobFilter)
+      );
+
   return (
     <div>
       <h1 className="mb-1 text-2xl font-bold">Candidates</h1>
@@ -142,19 +178,49 @@ function Candidates() {
           No candidates yet — upload some resumes above.
         </p>
       ) : (
-        <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-          <table className="w-full text-sm">
+        <>
+          {/* Filter the pool down to one job's applicants. Reuses the same
+              match data as the job tags — no extra request. */}
+          {jobOptions.length > 0 && (
+            <div className="mt-6 flex items-center gap-2 text-sm">
+              <label htmlFor="jobFilter" className="text-slate-500">
+                Filter by job:
+              </label>
+              <select
+                id="jobFilter"
+                value={jobFilter}
+                onChange={(e) => setJobFilter(e.target.value)}
+                className="rounded-md border border-slate-300 px-2 py-1"
+              >
+                <option value="">All candidates ({candidates.length})</option>
+                {jobOptions.map((j) => (
+                  <option key={j.id} value={j.id}>
+                    {j.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {filtered.length === 0 ? (
+            <p className="mt-4 text-slate-500">
+              No candidates matched to this job yet.
+            </p>
+          ) : (
+            <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+              <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-slate-500">
               <tr>
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Email</th>
                 <th className="px-4 py-3 font-medium">Skills</th>
+                <th className="px-4 py-3 font-medium">Matched jobs</th>
                 <th className="px-4 py-3 font-medium">Resume file</th>
                 <th className="px-4 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
-              {candidates.map((c) => (
+              {filtered.map((c) => (
                 <tr key={c._id} className="border-t border-slate-100">
                   <td className="px-4 py-3 font-medium">
                     {c.name || <span className="text-slate-400">unknown</span>}
@@ -184,6 +250,27 @@ function Candidates() {
                       {c.skills.length > 6 && ` +${c.skills.length - 6} more`}
                     </div>
                   </td>
+                  <td className="px-4 py-3">
+                    {(() => {
+                      const ms = matchesFor(c._id);
+                      if (ms.length === 0)
+                        return <span className="text-slate-300">—</span>;
+                      return (
+                        <div className="flex max-w-xs flex-wrap gap-1">
+                          {ms.map((m) => (
+                            <span
+                              key={m._id}
+                              className={`rounded-full px-2 py-0.5 text-xs font-medium ${chipColor(
+                                m.matchScore
+                              )}`}
+                            >
+                              {m.job?.title || "job"} {m.matchScore}%
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </td>
                   <td className="px-4 py-3 text-xs text-slate-400">
                     <div className="max-w-[10rem] truncate" title={c.sourceFilename}>
                       {c.sourceFilename}
@@ -208,7 +295,9 @@ function Candidates() {
               ))}
             </tbody>
           </table>
-        </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

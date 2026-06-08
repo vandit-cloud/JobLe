@@ -197,7 +197,7 @@ function Jobs() {
                     to={`/jobs/${job._id}/bulk`}
                     className="rounded-md bg-emerald-600 px-3 py-1.5 font-medium text-white hover:bg-emerald-700"
                   >
-                    Bulk match
+                    Applicants
                   </Link>
                   <button
                     onClick={() => handleDelete(job._id)}

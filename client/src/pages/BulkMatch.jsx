@@ -97,11 +97,14 @@ function BulkMatch() {
       <Link to="/jobs" className="text-sm text-blue-600 hover:underline">
         ← Back to jobs
       </Link>
-      <h1 className="mb-1 mt-2 text-2xl font-bold">Shortlist</h1>
+      <h1 className="mb-1 mt-2 text-2xl font-bold">
+        Applicants · {job.title}
+      </h1>
       <p className="mb-6 text-slate-500">
-        Stored candidates ranked against{" "}
-        <span className="font-medium">{job.title}</span> (
-        {job.requiredSkills.join(", ") || "no skills listed"})
+        Everyone in your talent pool ranked against this job (
+        {job.requiredSkills.join(", ") || "no skills listed"}). People who
+        applied through the job board show up here automatically; you can also
+        score the rest of your pool against this role below.
       </p>
 
       <div className="flex items-center gap-3">
@@ -123,8 +126,9 @@ function BulkMatch() {
 
       {!matches || matches.length === 0 ? (
         <p className="mt-6 text-slate-500">
-          No saved shortlist yet — upload candidates, then hit "Match all
-          stored candidates".
+          No applicants for this job yet — candidates who apply via the job
+          board appear here, or upload resumes on the Candidates page and hit
+          "Match all stored candidates".
         </p>
       ) : (
         <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
