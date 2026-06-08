@@ -9,6 +9,7 @@ const express = require("express");
 const multer = require("multer");
 const Candidate = require("../models/Candidate");
 const Match = require("../models/Match");
+const Assignment = require("../models/Assignment");
 const auth = require("../middleware/auth");
 // Shared Python-service client — parseFile used to live in this file;
 // extracted once the board routes needed it too.
@@ -165,6 +166,10 @@ router.delete("/:id", auth, async (req, res) => {
     });
     if (!candidate) return res.status(404).json({ error: "Candidate not found" });
     await Match.deleteMany({ candidate: candidate._id });
+    // Also reap any test assignments for this candidate — without this they'd
+    // dangle, pointing at a candidate that no longer exists. Same cascade
+    // hygiene as the Match cleanup above.
+    await Assignment.deleteMany({ candidate: candidate._id });
     res.json({ message: "Candidate deleted" });
   } catch (error) {
     res.status(400).json({ error: error.message });

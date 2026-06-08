@@ -263,7 +263,12 @@ router.delete("/:id", auth, async (req, res) => {
     // documents that match the filter in one go (could be zero, could be 100).
     await Result.deleteMany({ testId: req.params.id });
 
-    res.json({ message: "Test and its results deleted" });
+    // Also remove any assignments OF this test — otherwise they'd dangle,
+    // pointing at a test that no longer exists (stale "test sent" badges +
+    // orphan rows). Same cascade hygiene as Results above.
+    await Assignment.deleteMany({ test: req.params.id });
+
+    res.json({ message: "Test, its results, and its assignments deleted" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
