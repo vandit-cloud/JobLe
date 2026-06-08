@@ -1,6 +1,35 @@
 import { useState, useEffect } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, Link } from "react-router-dom";
 import { getTest, submitTest, getAssignmentStatus } from "../api";
+
+// The way OUT of the score screen. The exam page hides the whole nav bar (so
+// nobody can escape mid-test), which means a finished candidate would otherwise
+// be stranded with no link — so the exits live here, on the done screens only.
+//  • Arrived via an invitation (assignmentId set ⇒ a logged-in candidate):
+//    offer both "Back to My tests" and "Browse jobs".
+//  • Arrived via a plain shared link: just "Browse jobs" → /board, where the
+//    normal nav reappears.
+// Declared at module scope (not inside TakeTest) so React doesn't recreate it
+// every render — the same reuse rule TestForm follows.
+function ExitLinks({ assignmentId }) {
+  const primary =
+    "rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700";
+  const secondary =
+    "rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100";
+  return (
+    <div className="mt-8 flex justify-center gap-3">
+      {assignmentId && (
+        <Link to="/my-tests" className={primary}>
+          Back to My tests
+        </Link>
+      )}
+      {/* Sole button on the link door, so it's the primary one there. */}
+      <Link to="/board" className={assignmentId ? secondary : primary}>
+        Browse jobs
+      </Link>
+    </div>
+  );
+}
 
 // The CANDIDATE's page. Two doors lead here:
 //   /take/<test id>                      — the shared link (typed name)
@@ -184,6 +213,7 @@ function TakeTest() {
           {alreadyDone.score} / {alreadyDone.total}
         </p>
         <p className="mt-2 text-slate-500">your recorded score</p>
+        <ExitLinks assignmentId={assignmentId} />
       </div>
     );
   }
@@ -208,6 +238,7 @@ function TakeTest() {
         >
           {result.passed ? "Passed ✓" : "Did not pass ✗"}
         </p>
+        <ExitLinks assignmentId={assignmentId} />
       </div>
     );
   }
