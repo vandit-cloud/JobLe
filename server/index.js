@@ -48,6 +48,9 @@ app.use("/api/board", require("./routes/board"));
 // Test assignments — recruiter status list + the candidate "My tests" page.
 app.use("/api/assignments", require("./routes/assignments"));
 
+// Applications — the candidate "My applications" page (jobs they applied to).
+app.use("/api/applications", require("./routes/applications"));
+
 // 6. Start listening for requests on a PORT (a numbered door on your computer).
 //    We read it from .env, or fall back to 5000 if it's not set.
 const PORT = process.env.PORT || 5000;

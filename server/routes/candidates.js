@@ -10,6 +10,7 @@ const multer = require("multer");
 const Candidate = require("../models/Candidate");
 const Match = require("../models/Match");
 const Assignment = require("../models/Assignment");
+const Application = require("../models/Application");
 const auth = require("../middleware/auth");
 // Shared Python-service client — parseFile used to live in this file;
 // extracted once the board routes needed it too.
@@ -174,6 +175,8 @@ router.delete("/:id", auth, async (req, res) => {
     // dangle, pointing at a candidate that no longer exists. Same cascade
     // hygiene as the Match cleanup above.
     await Assignment.deleteMany({ candidate: candidate._id });
+    // And any applications this candidate made — same orphan-prevention.
+    await Application.deleteMany({ candidate: candidate._id });
     res.json({ message: "Candidate deleted" });
   } catch (error) {
     res.status(400).json({ error: error.message });

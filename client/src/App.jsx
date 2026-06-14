@@ -18,6 +18,7 @@ import Candidates from "./pages/Candidates";
 import Board from "./pages/Board";
 import Apply from "./pages/Apply";
 import MyTests from "./pages/MyTests";
+import MyApplications from "./pages/MyApplications";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -107,6 +108,12 @@ function App() {
               Job board
             </Link>
             <Link
+              to="/my-applications"
+              className="text-sm text-slate-600 hover:text-blue-600"
+            >
+              My applications
+            </Link>
+            <Link
               to="/my-tests"
               className="text-sm text-slate-600 hover:text-blue-600"
             >
@@ -165,6 +172,16 @@ function App() {
             element={
               token && role === "candidate" ? (
                 <MyTests />
+              ) : (
+                <Navigate to="/board" replace />
+              )
+            }
+          />
+          <Route
+            path="/my-applications"
+            element={
+              token && role === "candidate" ? (
+                <MyApplications />
               ) : (
                 <Navigate to="/board" replace />
               )

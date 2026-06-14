@@ -8,6 +8,7 @@ const multer = require("multer");
 const Job = require("../models/Job");
 const Candidate = require("../models/Candidate");
 const Match = require("../models/Match");
+const Application = require("../models/Application");
 const auth = require("../middleware/auth");
 // Shared Python-service client (matchFileToSkills used to live here).
 const { matchFileToSkills, matchText } = require("../resumeClient");
@@ -89,6 +90,8 @@ router.delete("/:id", auth, async (req, res) => {
     // Cascade: match rows for a deleted job point at nothing — remove them
     // (same pattern as Test → Result).
     await Match.deleteMany({ job: job._id });
+    // Same for applications to this job — a deleted job leaves none dangling.
+    await Application.deleteMany({ job: job._id });
     res.json({ message: "Job deleted" });
   } catch (error) {
     res.status(400).json({ error: error.message });

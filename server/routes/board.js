@@ -11,9 +11,11 @@
 // ──────────────────────────────────────────────────────────────
 const express = require("express");
 const multer = require("multer");
+const rateLimit = require("express-rate-limit");
 const Job = require("../models/Job");
 const Candidate = require("../models/Candidate");
 const Match = require("../models/Match");
+const Application = require("../models/Application");
 const { parseFile, matchText } = require("../resumeClient");
 
 const router = express.Router();
@@ -21,6 +23,26 @@ const router = express.Router();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
+});
+
+// Apply is the one PUBLIC route that does expensive work (parse a resume +
+// DB writes) with no login to throttle it. Cap how many applications one
+// source can fire in a window so a single spammer can't flood the talent
+// pool — and can't run up our parse bill. Keyed by IP, enforced BEFORE the
+// upload/parse runs, so blocked requests cost almost nothing.
+// NOTE: behind a real proxy/load-balancer in prod, set `app.set("trust
+// proxy", 1)` in index.js so req.ip is the client's, not the proxy's.
+const applyLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 5, // 5 applications per IP per window
+  standardHeaders: true, // expose the RateLimit-* headers
+  legacyHeaders: false,
+  // Return our usual { error } shape so the Apply page surfaces the message.
+  handler: (req, res) =>
+    res.status(429).json({
+      error:
+        "You've applied several times very quickly. Please wait a few minutes and try again.",
+    }),
 });
 
 // What the public is allowed to see about a job. NOTE: owner is populated
@@ -62,7 +84,7 @@ router.get("/:jobId", async (req, res) => {
 // Parse once → save Candidate owned by the job's recruiter → auto-match
 // against this job. Same upsert-by-email rule as recruiter bulk upload,
 // so re-applying with a fresher resume updates instead of duplicating.
-router.post("/:jobId/apply", upload.single("resume"), async (req, res) => {
+router.post("/:jobId/apply", applyLimiter, upload.single("resume"), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "Please attach your resume." });
   }
@@ -97,6 +119,15 @@ router.post("/:jobId/apply", upload.single("resume"), async (req, res) => {
     } else {
       candidate = await Candidate.create(fields);
     }
+
+    // Record the APPLICATION itself — the candidate's own act, distinct from
+    // the recruiter-side Match below. Upsert on (candidate, job) so re-applying
+    // refreshes it instead of duplicating. This is what powers "My applications".
+    await Application.findOneAndUpdate(
+      { candidate: candidate._id, job: job._id },
+      { owner: job.owner, status: "applied" },
+      { upsert: true, setDefaultsOnInsert: true }
+    );
 
     // Auto-match against the job they applied to (best effort: if scoring
     // fails the application is still saved — the recruiter can re-match).

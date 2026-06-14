@@ -325,6 +325,16 @@ export async function getMyAssignments() {
   return res.json();
 }
 
+// Candidate: the jobs I've applied to (linked to my account by email).
+// Returns [{ _id, jobId, jobTitle, company, status, appliedAt, matchScore }].
+export async function getMyApplications() {
+  const res = await fetch(`${API_URL}/applications/mine`, {
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok) throw new Error("Failed to load your applications");
+  return res.json();
+}
+
 // ── Public job board (candidate-facing — NO auth headers) ──────
 export async function getBoardJobs() {
   const res = await fetch(`${API_URL}/board`);
