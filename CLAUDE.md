@@ -159,7 +159,7 @@ These are **secrets — never commit `.env` files** (they're gitignored). Copy t
 
 - **Phase 1 — DONE & verified:** no-AI exam spine. Recruiter creates a test → shares link → candidate takes timed test → server scores → recruiter sees results. Includes auth, pass/fail threshold, timer, no-retake.
 - **Phase 2 — DONE:** the recruiter-internal AI loop. Parse resume → match vs job → bulk upload → ranked shortlist → generate AI resume-specific test → review → send → candidate takes → lie-detector view (match % vs test %).
-- **Phase 3 — in progress:** candidate accounts, public job board + self-apply, test assignments ("My tests"). Several slices are **built but may still need live verification** — when touching these, verify in the browser before assuming they work. Still deferred: linking applications to a candidate account ("my applications" page), usage counters, and browser-based proctoring (its own slice, later).
+- **Phase 3 — in progress:** candidate accounts, public job board + self-apply, test assignments ("My tests"), and "My applications". **Verified live (2026-06-16):** register candidate → board → self-apply → "My applications" (email-bridged, shows match %) → "My tests" empty state → logged-out route guard → public-apply rate-limit (429). Still deferred: usage counters and browser-based proctoring (its own slice, later).
 
 ## 11. Conventions & gotchas
 
@@ -169,6 +169,8 @@ These are **secrets — never commit `.env` files** (they're gitignored). Copy t
 - A candidate's role is carried **inside the signed JWT**, not just localStorage — so it can't be self-promoted.
 - **Don't edit `dataset.jsonl` with PowerShell** `Set-Content -Encoding utf8` — it writes a BOM that breaks Python's `json.loads`. Edit via Python.
 - Files over 100 MB break GitHub — never commit models, `.venv`, `node_modules`, or `*.pt`/`*.dll` (all gitignored). `study/` (personal notes) is also gitignored.
+- **The backend no longer dies if Mongo is unreachable at startup.** `config/db.js` retries with backoff instead of `process.exit(1)` (which, under nodemon, left the server permanently dead — this killed a demo once). The web server keeps listening; DB-dependent routes return a clear `503` until connected, then recover on their own. `/api/health` never touches the DB.
+- **Before any live demo (checklist):** (1) Atlas → Network Access → allowlist `0.0.0.0/0` so a venue's WiFi/new-IP can't lock you out (the #1 cause of "backend won't start" away from home). (2) Start the 3 services in order (§7) and hit `http://localhost:5000/api/health` — `ok` means the server is up; if `/api/board` returns `503`, the DB just isn't connected yet (check internet/allowlist), the server itself is fine.
 
 ---
 

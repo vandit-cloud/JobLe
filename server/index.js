@@ -10,6 +10,7 @@ require("dotenv").config();
 // 2. Bring in the libraries we installed.
 const express = require("express"); // the web server framework
 const cors = require("cors");       // lets the frontend talk to us
+const mongoose = require("mongoose"); // to check the live DB connection state
 const connectDB = require("./config/db"); // our database connection function
 
 // 3. Create the Express application — this `app` object IS our server.
@@ -27,6 +28,18 @@ app.use(express.json());  // automatically parse JSON request bodies
 //    This is a health check: a simple way to confirm the server is alive.
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "TalentLeague backend is running 🎉" });
+});
+
+// If the database isn't connected yet, fail FAST with a clear 503 instead of
+// letting the request hang on Mongoose's command buffer (and eventually time
+// out with a cryptic error). The server is alive — the DB just isn't ready.
+// /api/health is exempt above, so it always answers "is the web server up?".
+// readyState 1 = connected; anything else = not ready yet.
+app.use("/api", (req, res, next) => {
+  if (mongoose.connection.readyState === 1) return next();
+  res.status(503).json({
+    error: "Database is starting up — please retry in a few seconds.",
+  });
 });
 
 // Auth routes (register / login) live under /api/auth.
