@@ -19,6 +19,7 @@ import Board from "./pages/Board";
 import Apply from "./pages/Apply";
 import MyTests from "./pages/MyTests";
 import MyApplications from "./pages/MyApplications";
+import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -128,7 +129,14 @@ function App() {
         <div className="ml-auto flex items-center gap-4 text-sm">
           {token ? (
             <>
-              <span className="text-slate-400">{email}</span>
+              {/* Email links to settings (where "Delete account" lives) — a
+                  common pattern, and keeps one entry point for both roles. */}
+              <Link
+                to="/settings"
+                className="text-slate-400 hover:text-blue-600"
+              >
+                {email}
+              </Link>
               <button
                 onClick={handleLogout}
                 className="rounded-md border border-slate-300 px-3 py-1.5 hover:bg-slate-100"
@@ -186,6 +194,12 @@ function App() {
                 <Navigate to="/board" replace />
               )
             }
+          />
+          {/* Settings is for ANY logged-in user (both roles). Not logged in →
+              go log in. */}
+          <Route
+            path="/settings"
+            element={token ? <Settings /> : <Navigate to="/login" replace />}
           />
 
           {/* Recruiter-only pages — wrapped so they redirect to /login */}

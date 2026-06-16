@@ -7,6 +7,8 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const authAny = require("../middleware/authAny");
+const { deleteAccount } = require("../services/accountDeletion");
 
 const router = express.Router();
 
@@ -90,6 +92,24 @@ router.post("/login", async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+// ── DELETE MY OWN ACCOUNT ──────────────────────────────────────
+// DELETE /api/auth/me  (any logged-in user — recruiter OR candidate)
+// SECURITY: the id comes from the caller's OWN verified token, so this
+// can only ever delete the caller. There is deliberately no "delete user
+// by id/email" HTTP route — that power lives only in the local admin
+// script (scripts/deleteUser.js). Both share services/accountDeletion.js,
+// so a recruiter's data cascades and a candidate login is simply removed.
+router.delete("/me", authAny, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: "Account not found." });
+    const result = await deleteAccount(user);
+    res.json({ message: "Your account has been deleted.", ...result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

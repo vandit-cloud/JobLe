@@ -49,9 +49,27 @@ export function AuthProvider({ children }) {
     setRole(null);
   }
 
+  // Delete the logged-in account on the server, then clear the local session
+  // (same effect as logout). Returns the server's summary so the UI can show
+  // what was removed. We log out only AFTER the server confirms success.
+  async function deleteAccount() {
+    const result = await api.deleteAccount();
+    logout();
+    return result;
+  }
+
   return (
     <AuthContext.Provider
-      value={{ token, email, companyName, role, login, register, logout }}
+      value={{
+        token,
+        email,
+        companyName,
+        role,
+        login,
+        register,
+        logout,
+        deleteAccount,
+      }}
     >
       {children}
     </AuthContext.Provider>

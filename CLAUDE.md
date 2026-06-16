@@ -89,7 +89,7 @@ model-training/           ← dataset + fine-tune scripts (see model-training/RE
 ## 6. API surface (current)
 
 **Node `server/` (base `/api`)** — recruiter routes need a JWT; public routes are marked:
-- `auth`     — `POST /auth/register`, `POST /auth/login` (returns JWT 7d, email, role, companyName)
+- `auth`     — `POST /auth/register`, `POST /auth/login` (returns JWT 7d, email, role, companyName); `DELETE /auth/me` (self-delete, **either role** via `authAny`; recruiters cascade their owned data, candidates just lose the login — shared `services/accountDeletion.js`, same logic as the `deleteUser.js` CLI)
 - `tests`    — CRUD; `GET /tests/:id` (candidate view, **hides answers**), `GET /tests/:id/edit` (recruiter view, includes answers), `POST /tests/:id/submit` (server scores), `GET /tests/:id/results`
 - `resume`   — `POST /resume/analyze`, `POST /resume/generate-test` (forwards file to Python)
 - `jobs`     — CRUD + `POST /jobs/:id/match`, `/match-bulk`, `/match-stored`, `GET /jobs/:id/matches`

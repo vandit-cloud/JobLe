@@ -34,6 +34,22 @@ export async function login(email, password) {
   return data;
 }
 
+// ── deleteAccount ──────────────────────────────────────────────
+// Delete MY OWN account (DELETE /api/auth/me). Works for both roles —
+// the server takes the identity from the token, so it only ever deletes
+// the caller. Returns { message, role, counts } summarising what was removed.
+export async function deleteAccount() {
+  const res = await fetch(`${API_URL}/auth/me`, {
+    method: "DELETE",
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to delete account");
+  }
+  return res.json();
+}
+
 // ── createTest ─────────────────────────────────────────────────
 // Sends a new test to the backend (POST /api/tests) and returns the
 // saved test. We keep all fetch() details in here so our React pages
