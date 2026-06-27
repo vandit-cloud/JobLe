@@ -1,0 +1,123 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #11203a;
+  color-scheme: light;
+  background:
+    radial-gradient(circle at top left, rgba(249, 115, 22, 0.2), transparent 24%),
+    radial-gradient(circle at 80% 12%, rgba(15, 118, 110, 0.16), transparent 26%),
+    radial-gradient(circle at 50% 100%, rgba(14, 165, 233, 0.1), transparent 25%),
+    linear-gradient(180deg, #f7fbff 0%, #edf3f9 48%, #eaf1f8 100%);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply min-h-screen bg-transparent font-sans text-ink antialiased;
+  background-attachment: fixed;
+}
+
+#root {
+  @apply min-h-screen;
+  position: relative;
+  isolation: isolate;
+}
+
+.glass-panel {
+  @apply rounded-[28px] border border-white/80 bg-white/[0.88] shadow-panel backdrop-blur-xl;
+  box-shadow:
+    0 22px 60px rgba(17, 32, 58, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.app-shell {
+  @apply min-h-screen;
+  background:
+    radial-gradient(circle at top left, rgba(249, 115, 22, 0.12), transparent 22%),
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.12), transparent 20%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.08) 100%);
+}
+
+.workspace-main {
+  @apply min-h-screen;
+}
+
+.sidebar-shell {
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 22%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.06) 0%, rgba(0, 0, 0, 0) 100%);
+  box-shadow: 18px 0 48px rgba(15, 23, 42, 0.16);
+}
+
+.sidebar-scroll {
+  @apply min-h-0 flex-1 overflow-y-auto pr-1;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+
+.content-grid {
+  @apply mx-auto w-full max-w-[1560px];
+}
+
+.hero-panel {
+  @apply glass-panel relative overflow-hidden px-6 py-7 sm:px-8;
+}
+
+.hero-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top left, rgba(15, 118, 110, 0.08), transparent 34%),
+    radial-gradient(circle at 85% 15%, rgba(249, 115, 22, 0.08), transparent 24%);
+  pointer-events: none;
+}
+
+.input {
+  @apply w-full rounded-2xl border border-slate-200/90 bg-white/90 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-tide focus:ring-4 focus:ring-tide/10;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6);
+}
+
+.label {
+  @apply mb-2 block text-sm font-semibold text-slate-700;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60;
+  box-shadow: 0 14px 30px rgba(17, 32, 58, 0.18);
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50;
+}
+
+.btn-danger {
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-coral px-4 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-red-600;
+}
+
+.soft-table {
+  @apply min-w-full text-left;
+}
+
+.soft-table thead {
+  @apply bg-slate-50/90 text-xs uppercase tracking-[0.18em] text-slate-500;
+}
+
+.soft-table tbody tr {
+  @apply border-t border-slate-100 transition hover:bg-slate-50/75;
+}
