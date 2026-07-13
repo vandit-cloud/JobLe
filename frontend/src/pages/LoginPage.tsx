@@ -82,7 +82,7 @@ export function LoginPage() {
         password: SEEDED_CREDENTIALS[role].password,
       });
       showToast(role === "candidate" ? "Opened candidate workspace." : "Opened recruiter workspace.", "success");
-      navigate(DEFAULT_REDIRECTS[role], { replace: true });
+      navigate(getSafeRedirectPath(role, location.state?.from), { replace: true });
     } catch (error) {
       showToast("Quick access failed. Please try normal login.", "error");
     } finally {

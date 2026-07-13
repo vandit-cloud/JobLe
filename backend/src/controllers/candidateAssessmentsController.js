@@ -453,9 +453,123 @@ export const getCandidateAssessmentResult = asyncHandler(async (req, res) => {
   });
 });
 
+async function getCandidateOwnedAttempt(req) {
+  const attempt = await AssessmentAttempt.findById(req.params.attemptId).populate("assessmentId invitationId candidateId");
+  if (!attempt) throw new ApiError(404, "Assessment attempt not found");
+  if (!attempt.candidateId || attempt.candidateId._id.toString() !== req.user.candidateId) {
+    throw new ApiError(403, "You do not have access to this assessment attempt");
+  }
+  return attempt;
+}
+
+export const getCandidateAttemptTestContext = asyncHandler(async (req, res) => {
+  const attempt = await getCandidateOwnedAttempt(req);
+  if (attempt.status !== "In Progress") {
+    throw new ApiError(409, "This assessment attempt is not currently in progress.");
+  }
+
+  res.json({
+    attempt,
+    assessment: attempt.assessmentId,
+    warning: "Camera and identity indicators are review signals only. They do not automatically decide the result.",
+  });
+});
+
+export const saveCandidateAttemptAnswer = asyncHandler(async (req, res) => {
+  const attempt = await getCandidateOwnedAttempt(req);
+  if (attempt.status !== "In Progress") {
+    throw new ApiError(409, "This assessment attempt is not currently in progress.");
+  }
+
+  const assessment = attempt.assessmentId;
+  const question = assessment.sections.flatMap((section) => section.questions).find((item) => item._id.toString() === req.body.questionId);
+  if (!question) throw new ApiError(404, "Question not found");
+  const section = assessment.sections.find((item) => item._id.toString() === req.body.sectionId);
+  if (!section) throw new ApiError(404, "Section not found");
+
+  const existing = attempt.answers.find((item) => item.questionId.toString() === req.body.questionId);
+  if (existing) {
+    existing.answerText = req.body.answerText || existing.answerText;
+    existing.selectedOptionIds = req.body.selectedOptionIds || existing.selectedOptionIds;
+    existing.savedAt = new Date();
+    if (req.body.code) {
+      existing.codingSubmission = {
+        ...(existing.codingSubmission || {}),
+        code: req.body.code,
+        programmingLanguage: req.body.programmingLanguage || existing.codingSubmission?.programmingLanguage || "JavaScript",
+      };
+    }
+  } else {
+    attempt.answers.push({
+      questionId: question._id,
+      sectionId: section._id,
+      questionType: question.questionType,
+      answerText: req.body.answerText,
+      selectedOptionIds: req.body.selectedOptionIds || [],
+      codingSubmission: req.body.code
+        ? {
+            code: req.body.code,
+            programmingLanguage: req.body.programmingLanguage || "JavaScript",
+            submissionHistory: [],
+          }
+        : undefined,
+      savedAt: new Date(),
+    });
+  }
+
+  await attempt.save();
+  res.json({ saved: true, attempt });
+});
+
+export const submitCandidateAttemptAssessment = asyncHandler(async (req, res) => {
+  const attempt = await getCandidateOwnedAttempt(req);
+  if (attempt.status !== "In Progress") {
+    throw new ApiError(409, "This assessment attempt is not currently in progress.");
+  }
+
+  const assessment = attempt.assessmentId;
+  const scored = scoreAttempt(assessment, attempt);
+  attempt.sectionResults = scored.sectionResults;
+  attempt.totalScore = scored.totalScore;
+  attempt.passingStatus = scored.passingStatus;
+  attempt.recruiterRecommendation = scored.totalScore >= 85 ? "Strong technical performance" : "Recruiter review recommended";
+  attempt.status = "Submitted";
+  attempt.submittedAt = new Date();
+  attempt.completionTimeMinutes = Math.max(1, Math.round((attempt.submittedAt.getTime() - attempt.startedAt.getTime()) / 60000));
+  attempt.activityTimeline.push({ label: "Assessment submitted", metadata: { source: "candidate-authenticated-test" } });
+  await attempt.save();
+
+  const invitation = attempt.invitationId;
+  if (invitation) {
+    invitation.status = "Completed";
+    invitation.completedAt = new Date();
+    await invitation.save();
+  }
+
+  if (invitation) {
+    sendAssessmentSubmitted(invitation, attempt, assessment).catch(console.error);
+  }
+  res.json({ attempt, resultVisibility: assessment.resultVisibility });
+});
+
 export const getCandidateAssessments = asyncHandler(async (req, res) => {
-  const attempts = await AssessmentAttempt.find({
-    candidateId: req.user.candidateId,
-  }).populate("assessmentId");
-  res.json({ items: attempts });
+  const [attempts, invitations] = await Promise.all([
+    AssessmentAttempt.find({
+      candidateId: req.user.candidateId,
+    })
+      .populate("assessmentId")
+      .sort({ createdAt: -1 }),
+    AssessmentInvitation.find({
+      candidateId: req.user.candidateId,
+      status: { $in: ["Sent", "Opened", "Resume Submitted", "Started"] },
+    })
+      .populate("assessmentId")
+      .populate("jobId")
+      .sort({ sentAt: -1, createdAt: -1 }),
+  ]);
+
+  const attemptInvitationIds = new Set(attempts.map((attempt) => attempt.invitationId?.toString()).filter(Boolean));
+  const pendingInvitations = invitations.filter((invitation) => !attemptInvitationIds.has(invitation._id.toString()));
+
+  res.json({ items: attempts, pendingInvitations });
 });

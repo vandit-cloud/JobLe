@@ -1,12 +1,14 @@
 import api from "../lib/axios";
 import type {
   AdminResumeSecurityReview,
+  AlternativeVerificationRequest,
   ApplicationRecord,
   Assessment,
   AssessmentAttempt,
   AssessmentInvitation,
   AuthUser,
   Candidate,
+  CandidateIdentityVerification,
   CandidateDashboardResponse,
   CandidateApplicationsResponse,
   CandidateInterviewsResponse,
@@ -15,6 +17,7 @@ import type {
   CandidateSecuritySession,
   Company,
   IntegrityEvent,
+  IdentityVerificationEvent,
   Interview,
   InvoiceRecord,
   Job,
@@ -381,6 +384,34 @@ export async function fetchAssessmentResult(attemptId: string) {
   return response.data;
 }
 
+export async function fetchRecruiterIdentityReport(attemptId: string) {
+  const response = await api.get<{
+    attempt: AssessmentAttempt;
+    verification: CandidateIdentityVerification;
+    events: IdentityVerificationEvent[];
+    alternativeRequests: AlternativeVerificationRequest[];
+    imageUrls: Record<"front" | "left" | "right", string>;
+    summary: Record<string, unknown>;
+    warning: string;
+  }>(`/recruiter/assessment-results/${attemptId}/identity-report`);
+  return response.data;
+}
+
+export async function reviewRecruiterIdentityReport(attemptId: string, payload: { reviewStatus: string; recruiterNote?: string }) {
+  const response = await api.patch<{ verification: CandidateIdentityVerification }>(`/recruiter/assessment-results/${attemptId}/identity-report/review`, payload);
+  return response.data.verification;
+}
+
+export async function requestRecruiterIdentityRetest(attemptId: string, note?: string) {
+  const response = await api.post<{ verification: CandidateIdentityVerification }>(`/recruiter/assessment-results/${attemptId}/identity-report/request-retest`, { note });
+  return response.data.verification;
+}
+
+export async function requestRecruiterCandidateExplanation(attemptId: string, note?: string) {
+  const response = await api.post<{ verification: CandidateIdentityVerification }>(`/recruiter/assessment-results/${attemptId}/identity-report/request-explanation`, { note });
+  return response.data.verification;
+}
+
 export async function reviewAssessmentResult(attemptId: string, payload: { status: string; note?: string }) {
   const response = await api.patch(`/recruiter/assessment-results/${attemptId}/review`, payload);
   return response.data;
@@ -448,7 +479,7 @@ export async function submitCandidateAssessment(invitationToken: string) {
 }
 
 export async function fetchCandidateAssessments() {
-  const response = await api.get<{ items: AssessmentAttempt[] }>("/candidate/my-assessments");
+  const response = await api.get<{ items: AssessmentAttempt[]; pendingInvitations: AssessmentInvitation[] }>("/candidate/my-assessments");
   return response.data;
 }
 
@@ -462,6 +493,87 @@ export async function fetchCandidateAssessmentResult(attemptId: string, invitati
       : undefined,
   );
   return response.data;
+}
+
+export async function fetchCandidateAttemptTestContext(attemptId: string) {
+  const response = await api.get<{ attempt: AssessmentAttempt; assessment: Assessment; warning: string }>(`/candidate/assessments/${attemptId}/test-context`);
+  return response.data;
+}
+
+export async function saveCandidateAttemptAnswer(attemptId: string, payload: Record<string, unknown>) {
+  const response = await api.post(`/candidate/assessments/${attemptId}/save-answer`, payload);
+  return response.data;
+}
+
+export async function submitCandidateAttemptAssessment(attemptId: string) {
+  const response = await api.post(`/candidate/assessments/${attemptId}/submit`);
+  return response.data;
+}
+
+export async function fetchCandidateIdentityStatus(attemptId: string) {
+  const response = await api.get<{
+    verification: CandidateIdentityVerification;
+    summary: Record<string, unknown>;
+    events: IdentityVerificationEvent[];
+    alternativeRequests: AlternativeVerificationRequest[];
+    warning: string;
+  }>(`/candidate/assessments/${attemptId}/identity/status`);
+  return response.data;
+}
+
+export async function acceptCandidateIdentityConsent(attemptId: string) {
+  const response = await api.post<{ verification: CandidateIdentityVerification }>(`/candidate/assessments/${attemptId}/identity/consent`);
+  return response.data.verification;
+}
+
+export async function submitCandidateIdentitySystemCheck(attemptId: string, payload: Record<string, unknown>) {
+  const response = await api.post<{ verification: CandidateIdentityVerification; passed: boolean }>(`/candidate/assessments/${attemptId}/identity/system-check`, payload);
+  return response.data;
+}
+
+export async function captureCandidateIdentityAngle(attemptId: string, angle: "front" | "left" | "right", image: CandidateVerificationImage) {
+  const response = await api.post<{ verification: CandidateIdentityVerification }>(`/candidate/assessments/${attemptId}/identity/capture-${angle}`, { image });
+  return response.data.verification;
+}
+
+export async function completeCandidateIdentityLiveness(attemptId: string, payload: { required?: boolean; status: string; challengeType?: string; failedReason?: string }) {
+  const response = await api.post<{ verification: CandidateIdentityVerification }>(`/candidate/assessments/${attemptId}/identity/liveness`, payload);
+  return response.data.verification;
+}
+
+export async function completeCandidateIdentityVerification(attemptId: string) {
+  const response = await api.post<{ verification: CandidateIdentityVerification }>(`/candidate/assessments/${attemptId}/identity/complete`);
+  return response.data.verification;
+}
+
+export async function recordCandidateIdentityEvent(attemptId: string, payload: { eventType: string; source?: string; confidence?: number; severity?: string; metadata?: Record<string, unknown> }) {
+  const response = await api.post<{ event: IdentityVerificationEvent }>(`/candidate/assessments/${attemptId}/identity/event`, payload);
+  return response.data.event;
+}
+
+export async function requestCandidateAlternativeVerification(attemptId: string, payload: { reasonCategory: string; explanation: string; supportingNote?: string }) {
+  const response = await api.post<{ request: AlternativeVerificationRequest; verification: CandidateIdentityVerification }>(`/candidate/assessments/${attemptId}/identity/alternative-request`, payload);
+  return response.data;
+}
+
+export async function submitCandidateIdentityExplanation(attemptId: string, payload: { category: string; explanation: string }) {
+  const response = await api.post<{ verification: CandidateIdentityVerification }>(`/candidate/assessments/${attemptId}/identity/explanation`, payload);
+  return response.data.verification;
+}
+
+export async function fetchAdminIdentityVerificationEvents(params?: Record<string, string>) {
+  const response = await api.get<{ warning: string; items: IdentityVerificationEvent[] }>("/admin/identity-verification/events", { params });
+  return response.data;
+}
+
+export async function fetchAdminAlternativeVerificationRequests() {
+  const response = await api.get<{ items: AlternativeVerificationRequest[] }>("/admin/identity-verification/alternative-requests");
+  return response.data.items;
+}
+
+export async function reviewAdminAlternativeVerificationRequest(requestId: string, payload: { status: string; reviewerNote?: string }) {
+  const response = await api.patch<{ request: AlternativeVerificationRequest }>(`/admin/identity-verification/alternative-requests/${requestId}/review`, payload);
+  return response.data.request;
 }
 
 export async function fetchPublicSubscriptionPlans() {
@@ -645,6 +757,11 @@ export type CandidateVerificationImage = {
     brightness: number;
     contrast: number;
     edgeScore: number;
+    cameraCovered?: boolean;
+    faceVisible?: boolean;
+    frozenFrame?: boolean;
+    onlyOneFaceVisible?: boolean;
+    reviewSignals?: string[];
   };
 };
 

@@ -56,6 +56,10 @@ function scoreImageQuality(metrics = {}) {
 
 function imageDecision({ qualityScore, angle, metrics = {} }) {
   const issues = [];
+  if (metrics.cameraCovered) issues.push("Camera may be covered or the frame is too dark to review.");
+  if (metrics.frozenFrame) issues.push("Camera frame appears frozen or unchanged during monitoring.");
+  if (metrics.faceVisible === false) issues.push("Candidate face is not clearly visible.");
+  if (metrics.onlyOneFaceVisible === false) issues.push("Multiple-person or unclear-face review is required.");
   if (qualityScore < 65) issues.push("Image quality is low. Use better lighting and keep your face clear.");
   if (Number(metrics.brightness || 0) < 45) issues.push("Image appears too dark.");
   if (Number(metrics.brightness || 0) > 225) issues.push("Image appears overexposed.");

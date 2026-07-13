@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { adjustAssessmentScore, fetchAssessmentIntegrity, fetchAssessmentResult } from "../../api/recruiter";
 import { LoadingSkeleton } from "../../components/common/LoadingSkeleton";
 import { MatchScoreBreakdown } from "../../components/common/MatchScoreBreakdown";
@@ -37,6 +37,9 @@ export function AssessmentResultDetailPage() {
           <StatusBadge status={attempt.integritySummary.status} />
           <span className="text-sm text-slate-500">Overall score: {attempt.totalScore}</span>
           <span className="text-sm text-slate-500">Completion: {attempt.completionTimeMinutes} minutes</span>
+          <Link className="btn-secondary ml-auto" to={`/recruiter/assessment-results/${attemptId}/identity-report`}>
+            Identity report
+          </Link>
         </div>
       </div>
 

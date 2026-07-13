@@ -2,12 +2,14 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { fetchCandidateAssessmentContext, startCandidateAssessment } from "../../api/recruiter";
 import { LoadingSkeleton } from "../../components/common/LoadingSkeleton";
+import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 
 export function AssessmentInstructionsPage() {
   const { invitationToken = "" } = useParams();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { user } = useAuth();
   const [data, setData] = useState<any>(null);
 
   useEffect(() => {
@@ -36,7 +38,12 @@ export function AssessmentInstructionsPage() {
               const response = await startCandidateAssessment(invitationToken);
               localStorage.setItem(`attempt-${invitationToken}`, response.attempt._id);
               showToast("Assessment started.", "success");
-              navigate(`/assessment/${invitationToken}/test`);
+              const verificationPath = `/candidate/assessments/${response.attempt._id}/identity/notice`;
+              if (user?.role === "candidate") {
+                navigate(verificationPath);
+                return;
+              }
+              navigate("/login", { state: { from: verificationPath } });
             }}
             type="button"
           >
@@ -47,4 +54,3 @@ export function AssessmentInstructionsPage() {
     </div>
   );
 }
-

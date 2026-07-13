@@ -13,11 +13,14 @@ import {
 import {
   getCandidateAssessmentContext,
   getCandidateAssessmentResult,
+  getCandidateAttemptTestContext,
   getCandidateAssessments,
   recordCandidateIntegrityEvent,
   runCandidateCode,
   saveCandidateAnswer,
+  saveCandidateAttemptAnswer,
   startCandidateAssessment,
+  submitCandidateAttemptAssessment,
   submitCandidateAssessment,
   updateCandidateProfile,
   uploadCandidateResume,
@@ -148,6 +151,9 @@ router.post("/assessments/:attemptId/identity/complete", completeCandidateIdenti
 router.post("/assessments/:attemptId/identity/event", recordCandidateIdentityEvent);
 router.post("/assessments/:attemptId/identity/alternative-request", requestAlternativeVerification);
 router.post("/assessments/:attemptId/identity/explanation", submitCandidateIdentityExplanation);
+router.get("/assessments/:attemptId/test-context", getCandidateAttemptTestContext);
+router.post("/assessments/:attemptId/save-answer", saveCandidateAttemptAnswer);
+router.post("/assessments/:attemptId/submit", submitCandidateAttemptAssessment);
 router.get("/saved-jobs", getSavedJobs);
 router.post("/saved-jobs/:jobId", saveJob);
 router.delete("/saved-jobs/:jobId", removeSavedJob);

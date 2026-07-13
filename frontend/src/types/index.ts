@@ -475,6 +475,71 @@ export interface IntegrityEvent {
   createdAt: string;
 }
 
+export interface IdentityVerificationEvent {
+  _id: string;
+  eventType: string;
+  startedAt: string;
+  endedAt?: string;
+  durationSeconds: number;
+  confidence: number;
+  severity: "INFO" | "LOW" | "MEDIUM" | "REVIEW_REQUIRED" | "HIGH_REVIEW_REQUIRED";
+  source: string;
+  metadata: Record<string, unknown>;
+  reviewed: boolean;
+  recruiterNote?: string;
+  createdAt: string;
+}
+
+export interface CandidateIdentityVerification {
+  _id: string;
+  candidateId: string;
+  assessmentAttemptId: string;
+  organizationId: string;
+  assessmentId: string;
+  consent: {
+    consentAccepted: boolean;
+    consentAcceptedAt?: string;
+    noticeVersion: string;
+    ipAddress?: string;
+    userAgent?: string;
+  };
+  systemCheck?: Record<string, unknown> | null;
+  referenceImages: {
+    front?: Record<string, unknown> | null;
+    left?: Record<string, unknown> | null;
+    right?: Record<string, unknown> | null;
+  };
+  liveness: {
+    required: boolean;
+    status: "Not Required" | "Pending" | "Passed" | "Failed" | "Manual Review Required";
+    challengeType?: string;
+    completedAt?: string;
+    failedReason?: string;
+  };
+  status: string;
+  reviewStatus: string;
+  recruiterNote?: string;
+  candidateExplanation?: {
+    category: string;
+    explanation: string;
+    submittedAt: string;
+  };
+  expiresAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AlternativeVerificationRequest {
+  _id: string;
+  reasonCategory: string;
+  explanation: string;
+  supportingNote?: string;
+  status: "Requested" | "Approved" | "Rejected" | "Needs More Information";
+  reviewerNote?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SubscriptionPlan {
   _id: string;
   name: string;

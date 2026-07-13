@@ -10,6 +10,7 @@ import { AssessmentProfileReviewPage } from "./pages/candidate/AssessmentProfile
 import { AssessmentResumePage } from "./pages/candidate/AssessmentResumePage";
 import { AssessmentSubmittedPage } from "./pages/candidate/AssessmentSubmittedPage";
 import { CandidateApplicationDetailsPage } from "./pages/candidate/CandidateApplicationDetailsPage";
+import { CandidateAssessmentAttemptTestPage } from "./pages/candidate/CandidateAssessmentAttemptTestPage";
 import { AssessmentSystemCheckPage } from "./pages/candidate/AssessmentSystemCheckPage";
 import { AssessmentTestPage } from "./pages/candidate/AssessmentTestPage";
 import { AssessmentVerifyPage } from "./pages/candidate/AssessmentVerifyPage";
@@ -17,6 +18,7 @@ import { CandidateAssessmentResultPage } from "./pages/candidate/CandidateAssess
 import { CandidateApplicationsPage } from "./pages/candidate/CandidateApplicationsPage";
 import { CandidateAssessmentsPage } from "./pages/candidate/CandidateAssessmentsPage";
 import { CandidateDashboardPage } from "./pages/candidate/CandidateDashboardPage";
+import { CandidateIdentityVerificationFlowPage } from "./pages/candidate/CandidateIdentityVerificationFlowPage";
 import { CandidateInterviewsPage } from "./pages/candidate/CandidateInterviewsPage";
 import { CandidateNotificationsPage } from "./pages/candidate/CandidateNotificationsPage";
 import { CandidatePrivacyPage } from "./pages/candidate/CandidatePrivacyPage";
@@ -39,6 +41,7 @@ import { DashboardPage } from "./pages/recruiter/DashboardPage";
 import { EditJobPage } from "./pages/recruiter/EditJobPage";
 import { InterviewsPage } from "./pages/recruiter/InterviewsPage";
 import { InvoicesPage } from "./pages/recruiter/InvoicesPage";
+import { IdentityReportPage } from "./pages/recruiter/IdentityReportPage";
 import { JobDetailsPage } from "./pages/recruiter/JobDetailsPage";
 import { JobsBrowsePage } from "./pages/JobsBrowsePage";
 import { LoginPage } from "./pages/LoginPage";
@@ -91,6 +94,8 @@ export default function App() {
           <Route path="/recruiter/assessments/:assessmentId/invitations" element={<AssessmentInvitationsPage />} />
           <Route path="/recruiter/assessments/:assessmentId/results" element={<AssessmentResultsPage />} />
           <Route path="/recruiter/assessment-results/:attemptId" element={<AssessmentResultDetailPage />} />
+          <Route path="/recruiter/assessment-results/:attemptId/identity-report" element={<IdentityReportPage />} />
+          <Route path="/recruiter/assessment-results/:attemptId/integrity-report" element={<AssessmentResultDetailPage />} />
           <Route path="/recruiter/question-bank" element={<QuestionBankPage />} />
           <Route path="/recruiter/applicants" element={<ApplicantsPage />} />
           <Route path="/recruiter/talent-pool" element={<TalentPoolPage />} />
@@ -118,6 +123,14 @@ export default function App() {
           <Route path="/candidate/applications" element={<CandidateApplicationsPage />} />
           <Route path="/candidate/applications/:applicationId" element={<CandidateApplicationDetailsPage />} />
           <Route path="/candidate/assessments" element={<CandidateAssessmentsPage />} />
+          <Route path="/candidate/assessments/:attemptId/identity/notice" element={<CandidateIdentityVerificationFlowPage step="notice" />} />
+          <Route path="/candidate/assessments/:attemptId/identity/consent" element={<CandidateIdentityVerificationFlowPage step="consent" />} />
+          <Route path="/candidate/assessments/:attemptId/identity/system-check" element={<CandidateIdentityVerificationFlowPage step="system-check" />} />
+          <Route path="/candidate/assessments/:attemptId/identity/capture" element={<CandidateIdentityVerificationFlowPage step="capture" />} />
+          <Route path="/candidate/assessments/:attemptId/identity/liveness" element={<CandidateIdentityVerificationFlowPage step="liveness" />} />
+          <Route path="/candidate/assessments/:attemptId/identity/complete" element={<CandidateIdentityVerificationFlowPage step="complete" />} />
+          <Route path="/candidate/assessments/:attemptId/test" element={<CandidateAssessmentAttemptTestPage />} />
+          <Route path="/candidate/assessments/:attemptId/submitted" element={<CandidateIdentityVerificationFlowPage step="submitted" />} />
           <Route path="/candidate/assessments/:attemptId" element={<CandidateAssessmentResultPage />} />
           <Route path="/candidate/assessments/:attemptId/result" element={<CandidateAssessmentResultPage />} />
           <Route path="/candidate/assessment-results/:attemptId" element={<CandidateAssessmentResultPage />} />

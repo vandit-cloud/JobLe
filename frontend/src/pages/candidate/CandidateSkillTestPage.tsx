@@ -1,4 +1,4 @@
-import { ArrowLeft, Camera, CheckCircle2, ClipboardCheck, RotateCcw, ShieldAlert, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Camera, CheckCircle2, ClipboardCheck, Eye, RotateCcw, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -18,6 +18,17 @@ import { useToast } from "../../context/ToastContext";
 import type { SkillPassport } from "../../types";
 
 type VerificationAngle = "front" | "left" | "right";
+type AiDetectionState = {
+  cameraActive: boolean;
+  faceVisible: boolean;
+  onlyOneFaceVisible: boolean;
+  lighting: "Good" | "Low light" | "Too bright" | "Unknown";
+  sharpness: "Clear" | "Blurry" | "Unknown";
+  frozenFrame: boolean;
+  cameraCovered: boolean;
+  reviewSignals: string[];
+  checkedAt?: string;
+};
 
 const ANGLES: Array<{ key: VerificationAngle; label: string; instruction: string }> = [
   { key: "front", label: "Front", instruction: "Look straight into the camera." },
@@ -65,11 +76,45 @@ function getImageSignature(imageData: ImageData) {
   };
 }
 
+function signaturesMatch(left: number[] = [], right: number[] = []) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function analyzeFrame(signature: number[], metrics: { brightness: number; contrast: number; edgeScore: number }, previousSignature?: number[]): AiDetectionState {
+  const cameraCovered = metrics.brightness < 18 || metrics.contrast < 5;
+  const frozenFrame = Boolean(previousSignature?.length && signaturesMatch(signature, previousSignature));
+  const lowLight = metrics.brightness < 45;
+  const tooBright = metrics.brightness > 225;
+  const blurry = metrics.contrast < 12 || metrics.edgeScore < 8;
+  const faceVisible = !cameraCovered && !lowLight && !blurry;
+  const reviewSignals = [
+    cameraCovered ? "Camera covered or no usable frame" : "",
+    frozenFrame ? "Frozen video frame" : "",
+    !faceVisible ? "Face not clearly visible" : "",
+    lowLight ? "Low light" : "",
+    tooBright ? "Overexposed light" : "",
+    blurry ? "Blurry or low contrast" : "",
+  ].filter(Boolean);
+
+  return {
+    cameraActive: true,
+    faceVisible,
+    onlyOneFaceVisible: faceVisible,
+    lighting: lowLight ? "Low light" : tooBright ? "Too bright" : "Good",
+    sharpness: blurry ? "Blurry" : "Clear",
+    frozenFrame,
+    cameraCovered,
+    reviewSignals,
+    checkedAt: new Date().toISOString(),
+  };
+}
+
 export function CandidateSkillTestPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const previousSignatureRef = useRef<number[] | null>(null);
   const apiBaseUrl = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
@@ -81,6 +126,16 @@ export function CandidateSkillTestPage() {
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [verificationPhotos, setVerificationPhotos] = useState<Partial<Record<VerificationAngle, CandidateVerificationImage>>>({});
   const [lastLiveCheck, setLastLiveCheck] = useState<NonNullable<SkillPassport["identityVerification"]>["lastCheck"] | null>(null);
+  const [aiDetection, setAiDetection] = useState<AiDetectionState>({
+    cameraActive: false,
+    faceVisible: false,
+    onlyOneFaceVisible: false,
+    lighting: "Unknown",
+    sharpness: "Unknown",
+    frozenFrame: false,
+    cameraCovered: false,
+    reviewSignals: [],
+  });
 
   useEffect(() => {
     fetchCandidateSkillPassport()
@@ -122,7 +177,8 @@ export function CandidateSkillTestPage() {
     };
   }, []);
 
-  function captureCameraImage(): CandidateVerificationImage {
+  function captureCameraImage(options: { updateDetection?: boolean; includeFrozenSignal?: boolean } = {}): CandidateVerificationImage {
+    const { updateDetection = true, includeFrozenSignal = false } = options;
     if (!videoRef.current || !cameraReady) {
       throw new Error("Camera is not ready yet.");
     }
@@ -138,10 +194,22 @@ export function CandidateSkillTestPage() {
     context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     const { signature, metrics } = getImageSignature(imageData);
+    const detection = analyzeFrame(signature, metrics, includeFrozenSignal ? previousSignatureRef.current || undefined : undefined);
+    previousSignatureRef.current = signature;
+    if (updateDetection) {
+      setAiDetection(detection);
+    }
     return {
       imageData: canvas.toDataURL("image/jpeg", 0.86),
       signature,
-      metrics,
+      metrics: {
+        ...metrics,
+        cameraCovered: detection.cameraCovered,
+        faceVisible: detection.faceVisible,
+        frozenFrame: detection.frozenFrame,
+        onlyOneFaceVisible: detection.onlyOneFaceVisible,
+        reviewSignals: detection.reviewSignals,
+      },
     };
   }
 
@@ -150,7 +218,7 @@ export function CandidateSkillTestPage() {
 
     const interval = window.setInterval(() => {
       try {
-        const image = captureCameraImage();
+        const image = captureCameraImage({ includeFrozenSignal: true });
         recordCandidateSkillProctoringCheck(image)
           .then((check) => setLastLiveCheck(check || null))
           .catch(() => {
@@ -173,6 +241,26 @@ export function CandidateSkillTestPage() {
 
     return () => window.clearInterval(interval);
   }, [cameraReady, passport?.currentTest?.status, passport?.identityVerification?.status]);
+
+  useEffect(() => {
+    if (!cameraReady) return;
+    const interval = window.setInterval(() => {
+      try {
+        captureCameraImage({ updateDetection: true, includeFrozenSignal: true });
+      } catch {
+        setAiDetection((current) => ({
+          ...current,
+          cameraActive: false,
+          faceVisible: false,
+          onlyOneFaceVisible: false,
+          reviewSignals: ["Camera frame unavailable"],
+          checkedAt: new Date().toISOString(),
+        }));
+      }
+    }, 5000);
+
+    return () => window.clearInterval(interval);
+  }, [cameraReady]);
 
   async function captureAngle(angle: VerificationAngle, saveImmediately = false) {
     try {
@@ -237,7 +325,7 @@ export function CandidateSkillTestPage() {
   async function submitTest() {
     try {
       setSubmitting(true);
-      const identityCheckImage = captureCameraImage();
+      const identityCheckImage = captureCameraImage({ includeFrozenSignal: true });
       await submitCandidateStandardSkillTest(answers, identityCheckImage);
       showToast("Skill passport verified.", "success");
       navigate("/candidate/skill-result", { replace: true });
@@ -302,6 +390,35 @@ export function CandidateSkillTestPage() {
             ) : (
               <p className="mt-3 text-sm text-slate-600">{cameraReady ? "Camera ready for verification." : "Starting camera..."}</p>
             )}
+            <div className="mt-4 rounded-3xl border border-white/70 bg-white/75 p-4 shadow-sm">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-tide" />
+                <p className="text-sm font-bold text-ink">AI camera detection</p>
+              </div>
+              <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+                {[
+                  ["Camera", aiDetection.cameraActive ? "Active" : "Unavailable"],
+                  ["Face", aiDetection.faceVisible ? "Visible" : "Review"],
+                  ["People", aiDetection.onlyOneFaceVisible ? "One person" : "Review"],
+                  ["Lighting", aiDetection.lighting],
+                  ["Sharpness", aiDetection.sharpness],
+                  ["Frozen frame", aiDetection.frozenFrame ? "Review" : "No"],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-2xl bg-slate-50 px-3 py-2">
+                    <p className="font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
+                    <p className={`mt-1 font-bold ${String(value).includes("Review") || value === "Unavailable" ? "text-amber-700" : "text-emerald-700"}`}>{value}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-xs leading-5 text-slate-500">
+                AI detection creates review flags only. It never automatically rejects your test.
+              </p>
+              {aiDetection.reviewSignals.length ? (
+                <div className="mt-3 rounded-2xl bg-amber-50 p-3 text-xs font-semibold text-amber-800">
+                  Review signals: {aiDetection.reviewSignals.join(", ")}
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <div className="grid gap-3">

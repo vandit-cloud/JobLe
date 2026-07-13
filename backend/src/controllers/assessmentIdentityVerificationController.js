@@ -339,6 +339,9 @@ export const streamSignedIdentityImage = asyncHandler(async (req, res) => {
   const payload = verifyIdentityImageAccessToken(req.params.token);
   const verification = await CandidateIdentityVerification.findById(payload.verificationId);
   if (!verification) throw new ApiError(404, "Identity image not found.");
+  if (req.user.role !== "admin" && verification.organizationId.toString() !== req.user.companyId) {
+    throw new ApiError(403, "You do not have access to this identity image.");
+  }
   const image = verification.referenceImages?.[payload.angle];
   if (!image?.key) throw new ApiError(404, "Identity image not found.");
   const root = getSkillVerificationStorageRoot();
