@@ -3,7 +3,7 @@ import api from "../../lib/axios";
 import { resolveAssetUrl } from "../../lib/utils";
 
 function isProtectedResume(resumeUrl?: string) {
-  return Boolean(resumeUrl?.startsWith("/uploads/resumes/"));
+  return Boolean(resumeUrl?.startsWith("/uploads/resumes/") || resumeUrl?.startsWith("/uploads/resumes-clean/"));
 }
 
 export function ResumeViewer({
@@ -15,7 +15,7 @@ export function ResumeViewer({
   applicationId?: string;
   assessmentAttemptId?: string;
 }) {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [signedUrl, setSignedUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -28,23 +28,21 @@ export function ResumeViewer({
   }, [resumeUrl]);
 
   useEffect(() => {
-    let nextBlobUrl: string | null = null;
-
     async function loadProtectedResume() {
       if (!resumeUrl || !isProtectedResume(resumeUrl)) {
-        setBlobUrl(null);
+        setSignedUrl("");
         setError("");
         return;
       }
 
       const requestUrl = applicationId
-        ? `/recruiter/applications/${applicationId}/resume/file`
+        ? `/recruiter/applications/${applicationId}/resume/signed-url`
         : assessmentAttemptId
-          ? `/recruiter/assessment-results/${assessmentAttemptId}/resume/file`
+          ? `/recruiter/assessment-results/${assessmentAttemptId}/resume/signed-url`
           : "";
 
       if (!requestUrl) {
-        setBlobUrl(null);
+        setSignedUrl("");
         setError("Protected resume is unavailable in this view.");
         return;
       }
@@ -53,13 +51,10 @@ export function ResumeViewer({
       setError("");
 
       try {
-        const response = await api.get<Blob>(requestUrl, {
-          responseType: "blob",
-        });
-        nextBlobUrl = URL.createObjectURL(response.data);
-        setBlobUrl(nextBlobUrl);
+        const response = await api.get<{ signedUrl: string }>(requestUrl);
+        setSignedUrl(response.data.signedUrl);
       } catch (_error) {
-        setBlobUrl(null);
+        setSignedUrl("");
         setError("Unable to load the protected resume.");
       } finally {
         setLoading(false);
@@ -67,12 +62,6 @@ export function ResumeViewer({
     }
 
     loadProtectedResume();
-
-    return () => {
-      if (nextBlobUrl) {
-        URL.revokeObjectURL(nextBlobUrl);
-      }
-    };
   }, [applicationId, assessmentAttemptId, resumeUrl]);
 
   if (!resumeUrl) {
@@ -89,7 +78,7 @@ export function ResumeViewer({
 
   return (
     <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-      <iframe className="h-[480px] w-full" src={blobUrl || directUrl} title="Resume viewer" />
+      <iframe className="h-[480px] w-full" sandbox="" src={signedUrl || directUrl} title="Resume viewer" />
     </div>
   );
 }

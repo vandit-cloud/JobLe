@@ -23,6 +23,14 @@ import {
   uploadCandidateResumeVersion,
 } from "../controllers/candidateResumeController.js";
 import {
+  getCandidateSkillPassport,
+  getCandidateTalentInvitations,
+  respondToTalentInvitation,
+  startCandidateStandardSkillTest,
+  submitCandidateStandardSkillTest,
+  updateCandidatePassportSkills,
+} from "../controllers/candidateSkillPassportController.js";
+import {
   deactivateCandidateAccount,
   deleteCandidateAccount,
   deleteCandidateSecuritySession,
@@ -54,13 +62,14 @@ import {
   removeSavedJob,
   saveJob,
   submitCandidateApplication,
+  streamCandidateApplicationResume,
   updateCandidatePrivacy,
   updateCandidateApplicationDraft,
   updateCandidateProfileDetails,
   withdrawCandidateApplication,
 } from "../controllers/candidatePortalController.js";
 import { authenticate, requireCandidate } from "../middleware/auth.js";
-import { aiRateLimiter } from "../middleware/rateLimiter.js";
+import { aiRateLimiter, resumeUploadLimiter } from "../middleware/rateLimiter.js";
 import { uploadResume } from "../middleware/upload.js";
 import { validate } from "../middleware/validate.js";
 import {
@@ -84,7 +93,7 @@ const router = Router();
 
 router.get("/assessment/:invitationToken", getCandidateAssessmentContext);
 router.post("/assessment/:invitationToken/verify", validate(verifyInvitationSchema), verifyCandidateInvitation);
-router.post("/assessment/:invitationToken/resume", uploadResume.single("resume"), uploadCandidateResume);
+router.post("/assessment/:invitationToken/resume", resumeUploadLimiter, uploadResume.single("resume"), uploadCandidateResume);
 router.put("/assessment/:invitationToken/profile", validate(candidateProfileSchema), updateCandidateProfile);
 router.post("/assessment/:invitationToken/start", startCandidateAssessment);
 router.post("/assessment/:invitationToken/save-answer", validate(saveAnswerSchema), saveCandidateAnswer);
@@ -98,13 +107,19 @@ router.get("/dashboard", getCandidateDashboard);
 router.get("/profile", getCandidateProfile);
 router.put("/profile", validate(candidatePortalProfileSchema), updateCandidateProfileDetails);
 router.get("/resumes", getCandidateResumes);
-router.post("/resumes", uploadResume.single("resume"), uploadCandidateResumeVersion);
+router.post("/resumes", resumeUploadLimiter, uploadResume.single("resume"), uploadCandidateResumeVersion);
 router.get("/resumes/:resumeId", getCandidateResumeById);
 router.get("/resumes/:resumeId/file", streamCandidateResumeFile);
 router.delete("/resumes/:resumeId", deleteCandidateResume);
 router.patch("/resumes/:resumeId/default", setDefaultCandidateResume);
 router.post("/resumes/:resumeId/analyze", analyzeCandidateResume);
 router.put("/resumes/:resumeId/confirm-extracted-data", validate(candidateResumeConfirmSchema), confirmCandidateResumeExtractedData);
+router.get("/skill-passport", getCandidateSkillPassport);
+router.put("/skill-passport/skills", updateCandidatePassportSkills);
+router.post("/skill-passport/start-standard-test", startCandidateStandardSkillTest);
+router.post("/skill-passport/submit-standard-test", submitCandidateStandardSkillTest);
+router.get("/skill-passport/invitations", getCandidateTalentInvitations);
+router.patch("/skill-passport/invitations/:invitationId/respond", respondToTalentInvitation);
 router.get("/saved-jobs", getSavedJobs);
 router.post("/saved-jobs/:jobId", saveJob);
 router.delete("/saved-jobs/:jobId", removeSavedJob);
@@ -113,6 +128,7 @@ router.post("/jobs/:jobId/applications", validate(candidateJobApplicationSchema)
 router.post("/jobs/:jobId/applications/draft", validate(candidateJobApplicationSchema), createCandidateApplicationDraft);
 router.get("/applications", getCandidateApplications);
 router.get("/applications/:applicationId", getCandidateApplicationById);
+router.get("/applications/:applicationId/resume/file", streamCandidateApplicationResume);
 router.put("/applications/:applicationId", validate(candidateJobApplicationSchema), updateCandidateApplicationDraft);
 router.post("/applications/:applicationId/submit", submitCandidateApplication);
 router.patch("/applications/:applicationId/withdraw", withdrawCandidateApplication);

@@ -3,8 +3,11 @@ import mongoose from "mongoose";
 import { Application } from "../models/Application.js";
 import { Candidate } from "../models/Candidate.js";
 import { Job } from "../models/Job.js";
+import { Resume } from "../models/Resume.js";
 import { analyzeCandidateMatch } from "../services/aiService.js";
+import { canRecruiterAccessCandidateResume } from "../services/candidatePrivacyAccessService.js";
 import { sendApplicationStatusChanged } from "../services/emailService.js";
+import { buildSignedResumeUrl, createResumeAccessToken } from "../utils/resumeAccessToken.js";
 import { resolveStoredResumePath } from "../utils/resumeStorage.js";
 import { createAuditLog } from "../services/auditService.js";
 import { ApiError } from "../utils/apiError.js";
@@ -244,6 +247,51 @@ export const getProtectedResume = asyncHandler(async (req, res) => {
   });
 });
 
+export const getProtectedResumeSignedUrl = asyncHandler(async (req, res) => {
+  const application = await Application.findOne({
+    _id: req.params.applicationId,
+    recruiterId: req.user.recruiterId,
+  });
+
+  if (!application) {
+    throw new ApiError(404, "Application not found");
+  }
+
+  const resume = await Resume.findOne({ resumeUrl: application.resumeUrl, candidateId: application.candidateId });
+  if (!resume || resume.securityStatus !== "CLEAN" || resume.confirmationStatus !== "CONFIRMED" || resume.storageZone !== "clean") {
+    throw new ApiError(403, "This resume is not available for recruiter access.");
+  }
+  const privacyAllowed = await canRecruiterAccessCandidateResume({
+    candidateId: application.candidateId,
+    recruiterId: req.user.recruiterId,
+    companyId: req.user.companyId,
+  });
+  if (!privacyAllowed) {
+    throw new ApiError(403, "Candidate privacy settings do not allow resume access.");
+  }
+
+  const token = createResumeAccessToken({
+    resumeId: resume._id.toString(),
+    actorRole: "recruiter",
+    actorId: String(req.user.recruiterId || req.user.userId || ""),
+    applicationId: application._id.toString(),
+    reasonCode: "APPLICATION_RELATIONSHIP",
+  });
+
+  resume.securityEvents.push({
+    eventType: "Signed URL generated",
+    status: resume.securityStatus,
+    reasonCode: "APPLICATION_RELATIONSHIP",
+    createdAt: new Date(),
+  });
+  await resume.save();
+
+  res.json({
+    signedUrl: buildSignedResumeUrl(req, token),
+    expiresInSeconds: 300,
+  });
+});
+
 export const streamProtectedResume = asyncHandler(async (req, res) => {
   const application = await Application.findOne({
     _id: req.params.applicationId,
@@ -252,6 +300,19 @@ export const streamProtectedResume = asyncHandler(async (req, res) => {
 
   if (!application) {
     throw new ApiError(404, "Application not found");
+  }
+
+  const resume = await Resume.findOne({ resumeUrl: application.resumeUrl, candidateId: application.candidateId });
+  if (resume && (resume.securityStatus !== "CLEAN" || resume.confirmationStatus !== "CONFIRMED" || resume.storageZone !== "clean")) {
+    throw new ApiError(403, "This resume is not available for recruiter access.");
+  }
+  const privacyAllowed = await canRecruiterAccessCandidateResume({
+    candidateId: application.candidateId,
+    recruiterId: req.user.recruiterId,
+    companyId: req.user.companyId,
+  });
+  if (!privacyAllowed) {
+    throw new ApiError(403, "Candidate privacy settings do not allow resume access.");
   }
 
   const absolutePath = resolveStoredResumePath(application.resumeUrl);
@@ -263,6 +324,26 @@ export const streamProtectedResume = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Resume file not found");
   }
 
+  if (resume) {
+    resume.accessLog.push({
+      actorRole: "recruiter",
+      actorId: String(req.user.recruiterId || req.user.userId || ""),
+      action: "recruiter_viewed_resume",
+      ipAddress: String(req.ip || req.headers["x-forwarded-for"] || req.socket?.remoteAddress || ""),
+      reasonCode: "APPLICATION_RELATIONSHIP",
+      accessedAt: new Date(),
+    });
+    resume.securityEvents.push({
+      eventType: "Recruiter viewed resume",
+      status: resume.securityStatus,
+      reasonCode: "APPLICATION_RELATIONSHIP",
+      createdAt: new Date(),
+    });
+    await resume.save();
+  }
+
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
   res.sendFile(absolutePath);
 });
 

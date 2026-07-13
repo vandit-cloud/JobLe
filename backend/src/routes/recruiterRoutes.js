@@ -5,6 +5,7 @@ import {
   getApplicationById,
   getApplications,
   getProtectedResume,
+  getProtectedResumeSignedUrl,
   getShortlistedApplications,
   removeFromShortlist,
   selectCandidate,
@@ -13,6 +14,7 @@ import {
 } from "../controllers/recruiterApplicationsController.js";
 import { getCompanyProfile, createCompanyProfile, updateCompanyProfile, uploadCompanyLogo } from "../controllers/recruiterCompanyController.js";
 import { getDashboard } from "../controllers/recruiterDashboardController.js";
+import { getTalentPool, inviteTalentCandidate } from "../controllers/recruiterTalentPoolController.js";
 import {
   addInterviewFeedback,
   cancelInterview,
@@ -52,6 +54,8 @@ const router = Router();
 router.use(authenticate, requireRecruiter);
 
 router.get("/dashboard", getDashboard);
+router.get("/talent-pool", getTalentPool);
+router.post("/talent-pool/:candidateId/invite", inviteTalentCandidate);
 
 router.get("/company", getCompanyProfile);
 router.post("/company", validate(companySchema), createCompanyProfile);
@@ -75,6 +79,7 @@ router.get("/applications/:applicationId", getApplicationById);
 router.patch("/applications/:applicationId/status", validate(applicationStatusSchema), updateApplicationStatus);
 router.post("/applications/:applicationId/analyze", aiRateLimiter, analyzeApplication);
 router.get("/applications/:applicationId/resume", getProtectedResume);
+router.get("/applications/:applicationId/resume/signed-url", getProtectedResumeSignedUrl);
 router.get("/applications/:applicationId/resume/file", streamProtectedResume);
 router.patch("/applications/:applicationId/remove-shortlist", validate(removeShortlistSchema), removeFromShortlist);
 router.patch("/applications/:applicationId/select", selectCandidate);

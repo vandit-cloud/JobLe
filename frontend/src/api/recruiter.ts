@@ -1,5 +1,6 @@
 import api from "../lib/axios";
 import type {
+  AdminResumeSecurityReview,
   ApplicationRecord,
   Assessment,
   AssessmentAttempt,
@@ -22,6 +23,9 @@ import type {
   PaymentMethodRecord,
   SavedJobRecord,
   ResumeRecord,
+  SkillPassport,
+  TalentInvitation,
+  TalentPoolCandidate,
   SubscriptionPlan,
   SubscriptionRecord,
   UsageOverview,
@@ -51,6 +55,11 @@ export async function loginCandidate(payload: { email: string; password: string 
   return response.data;
 }
 
+export async function loginAdmin(payload: { email: string; password: string }) {
+  const response = await api.post<{ token: string; user: AuthUser }>("/auth/admin/login", payload);
+  return response.data;
+}
+
 export async function registerCandidate(payload: {
   name: string;
   email: string;
@@ -66,6 +75,16 @@ export async function registerCandidate(payload: {
 export async function fetchCurrentUser() {
   const response = await api.get<{ user: AuthUser }>("/auth/me");
   return response.data.user;
+}
+
+export async function fetchAdminResumeSecurityReview() {
+  const response = await api.get<AdminResumeSecurityReview>("/admin/resume-security");
+  return response.data;
+}
+
+export async function deleteAdminRejectedResumeFile(resumeId: string) {
+  const response = await api.delete<{ message: string }>(`/admin/resume-security/${resumeId}/rejected-file`);
+  return response.data.message;
 }
 
 export async function fetchDashboard() {
@@ -190,6 +209,19 @@ export async function selectCandidate(applicationId: string) {
 export async function compareCandidates(applicationIds: string[]) {
   const response = await api.post("/recruiter/applications/compare", { applicationIds });
   return response.data;
+}
+
+export async function fetchTalentPool(params: Record<string, string | number | undefined> = {}) {
+  const response = await api.get<{ items: TalentPoolCandidate[]; summary: Record<string, number> }>("/recruiter/talent-pool", { params });
+  return response.data;
+}
+
+export async function inviteTalentCandidate(
+  candidateId: string,
+  payload: { actionType?: string; jobId?: string; message?: string },
+) {
+  const response = await api.post<{ message: string }>(`/recruiter/talent-pool/${candidateId}/invite`, payload);
+  return response.data.message;
 }
 
 export async function fetchInterviews() {
@@ -591,6 +623,36 @@ export async function confirmCandidateResumeExtractedData(
   return response.data;
 }
 
+export async function fetchCandidateSkillPassport() {
+  const response = await api.get<{ passport: SkillPassport }>("/candidate/skill-passport");
+  return response.data.passport;
+}
+
+export async function updateCandidateSkillPassportSkills(confirmedSkills: SkillPassport["confirmedSkills"]) {
+  const response = await api.put<{ passport: SkillPassport }>("/candidate/skill-passport/skills", { confirmedSkills });
+  return response.data.passport;
+}
+
+export async function startCandidateStandardSkillTest() {
+  const response = await api.post<{ passport: SkillPassport }>("/candidate/skill-passport/start-standard-test");
+  return response.data.passport;
+}
+
+export async function submitCandidateStandardSkillTest(answers: Record<string, string[]>) {
+  const response = await api.post<{ passport: SkillPassport }>("/candidate/skill-passport/submit-standard-test", { answers });
+  return response.data.passport;
+}
+
+export async function fetchCandidateTalentInvitations() {
+  const response = await api.get<{ items: TalentInvitation[] }>("/candidate/skill-passport/invitations");
+  return response.data.items;
+}
+
+export async function respondToTalentInvitation(invitationId: string, response: "Accepted" | "Rejected") {
+  const result = await api.patch<{ message: string }>(`/candidate/skill-passport/invitations/${invitationId}/respond`, { response });
+  return result.data.message;
+}
+
 export async function fetchPublicJobs(params: Record<string, string | number | undefined> = {}) {
   const response = await api.get<PaginatedResponse<Job>>("/public/jobs", { params });
   return response.data;
@@ -638,6 +700,13 @@ export async function fetchCandidateApplication(applicationId: string) {
     assessmentInvitations: AssessmentInvitation[];
     timeline: Array<{ label: string; at: string }>;
   }>(`/candidate/applications/${applicationId}`);
+  return response.data;
+}
+
+export async function fetchCandidateApplicationResumeFile(applicationId: string) {
+  const response = await api.get<Blob>(`/candidate/applications/${applicationId}/resume/file`, {
+    responseType: "blob",
+  });
   return response.data;
 }
 

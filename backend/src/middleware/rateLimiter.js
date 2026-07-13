@@ -11,3 +11,14 @@ export const aiRateLimiter = rateLimit({
   },
 });
 
+export const resumeUploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => String(req.user?.candidateId || req.params?.invitationToken || req.ip),
+  message: {
+    code: "RESUME_UPLOAD_LIMIT_REACHED",
+    message: "Too many resume uploads. Please try again later.",
+  },
+});

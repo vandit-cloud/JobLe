@@ -23,6 +23,48 @@ const resumeSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    quarantineFileKey: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    cleanFileKey: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    rejectedFileKey: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    storageZone: {
+      type: String,
+      enum: ["quarantine", "clean", "rejected", "legacy"],
+      default: "clean",
+      index: true,
+    },
+    securityStatus: {
+      type: String,
+      enum: ["UPLOADING", "QUARANTINED", "VALIDATING", "SCANNING", "SANITIZING", "EXTRACTING", "WAITING_FOR_CONFIRMATION", "CLEAN", "REJECTED", "FAILED"],
+      default: "UPLOADING",
+      index: true,
+    },
+    confirmationStatus: {
+      type: String,
+      enum: ["PENDING", "CONFIRMED"],
+      default: "PENDING",
+      index: true,
+    },
+    rejectedReasonCode: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    sanitizedAt: {
+      type: Date,
+      default: null,
+    },
     mimeType: {
       type: String,
       required: true,
@@ -33,17 +75,38 @@ const resumeSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    fileHash: {
+      type: String,
+      trim: true,
+      index: true,
+    },
+    pageCount: {
+      type: Number,
+      default: null,
+    },
     isDefault: {
       type: Boolean,
       default: false,
     },
     processingStatus: {
       type: String,
-      default: "Completed",
+      default: "Uploading",
     },
     analysisStatus: {
       type: String,
-      default: "Pending",
+      default: "Processing",
+    },
+    uploadWarnings: {
+      type: [String],
+      default: [],
+    },
+    uploadChecks: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    extractionError: {
+      type: String,
+      default: "",
     },
     extractedData: {
       type: mongoose.Schema.Types.Mixed,
@@ -78,6 +141,38 @@ const resumeSchema = new mongoose.Schema(
     uploadedAt: {
       type: Date,
       default: Date.now,
+    },
+    accessLog: {
+      type: [
+        {
+          actorRole: String,
+          actorId: String,
+          action: String,
+          ipAddress: String,
+          reasonCode: String,
+          accessedAt: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
+      default: [],
+    },
+    securityEvents: {
+      type: [
+        {
+          eventType: String,
+          status: String,
+          reasonCode: String,
+          message: String,
+          details: mongoose.Schema.Types.Mixed,
+          createdAt: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
+      default: [],
     },
   },
   {

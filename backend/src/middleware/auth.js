@@ -65,3 +65,11 @@ export function requireCandidate(req, _res, next) {
 
   return next();
 }
+
+export function requireAdmin(req, _res, next) {
+  if (req.user?.role !== "admin") {
+    return next(new ApiError(403, "Admin access is required"));
+  }
+
+  return next();
+}

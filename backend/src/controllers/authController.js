@@ -152,6 +152,26 @@ export const loginCandidate = asyncHandler(async (req, res) => {
   res.json(buildAuthPayload({ user, sessionId: session.sessionId, candidate }));
 });
 
+export const loginAdmin = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  const user = await User.findOne({ email }).select("+passwordHash");
+
+  if (!user || user.role !== "admin") {
+    throw new ApiError(401, "Invalid email or password");
+  }
+
+  const passwordMatches = await bcrypt.compare(password, user.passwordHash);
+  if (!passwordMatches) {
+    throw new ApiError(401, "Invalid email or password");
+  }
+  if (user.accountStatus !== "active") {
+    throw new ApiError(403, "This account is not active");
+  }
+
+  const session = await createUserSession({ req, user });
+  res.json(buildAuthPayload({ user, sessionId: session.sessionId }));
+});
+
 export const getCurrentUser = asyncHandler(async (req, res) => {
   const recruiter = req.user.role === "recruiter" ? await Recruiter.findById(req.user.recruiterId) : null;
   const candidate = req.user.role === "candidate" ? await Candidate.findById(req.user.candidateId) : null;

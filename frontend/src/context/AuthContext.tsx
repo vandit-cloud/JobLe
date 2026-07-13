@@ -1,11 +1,13 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { fetchCurrentUser, loginCandidate, loginRecruiter, registerCandidate, registerRecruiter } from "../api/recruiter";
+import { fetchCurrentUser, loginAdmin, loginCandidate, loginRecruiter, registerCandidate, registerRecruiter } from "../api/recruiter";
 import type { AuthUser } from "../types";
+
+type LoginRole = "recruiter" | "candidate" | "admin";
 
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
-  login: (payload: { email: string; password: string; role: "recruiter" | "candidate" }) => Promise<void>;
+  login: (payload: { email: string; password: string; role: LoginRole }) => Promise<void>;
   register: (
     payload:
       | {
@@ -59,9 +61,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       loading,
-      async login(payload: { email: string; password: string; role: "recruiter" | "candidate" }) {
+      async login(payload: { email: string; password: string; role: LoginRole }) {
         const credentials = { email: payload.email, password: payload.password };
-        const data = payload.role === "candidate" ? await loginCandidate(credentials) : await loginRecruiter(credentials);
+        const data =
+          payload.role === "candidate"
+            ? await loginCandidate(credentials)
+            : payload.role === "admin"
+              ? await loginAdmin(credentials)
+              : await loginRecruiter(credentials);
         localStorage.setItem(TOKEN_KEY, data.token);
         setUser(data.user);
       },

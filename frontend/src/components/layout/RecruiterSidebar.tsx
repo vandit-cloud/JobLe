@@ -1,4 +1,4 @@
-import { BadgeDollarSign, BriefcaseBusiness, Building2, CalendarClock, ChartColumnBig, ClipboardList, FileStack, LogOut, MenuSquare, Star } from "lucide-react";
+import { BadgeDollarSign, BriefcaseBusiness, Building2, CalendarClock, ChartColumnBig, ClipboardList, FileStack, LogOut, MenuSquare, SearchCheck, Star } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { cn } from "../../lib/utils";
@@ -10,6 +10,7 @@ const items = [
   { to: "/recruiter/jobs", label: "Manage Jobs", icon: MenuSquare },
   { to: "/recruiter/assessments", label: "Assessments", icon: FileStack },
   { to: "/recruiter/applicants", label: "Applicants", icon: ClipboardList },
+  { to: "/recruiter/talent-pool", label: "Talent Pool", icon: SearchCheck },
   { to: "/recruiter/shortlisted", label: "Shortlisted Candidates", icon: Star },
   { to: "/recruiter/interviews", label: "Interviews", icon: CalendarClock },
   { to: "/recruiter/subscription", label: "Subscription", icon: BadgeDollarSign },

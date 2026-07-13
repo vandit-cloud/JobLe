@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { fetchCandidateApplication, submitCandidateApplication, updateCandidateApplicationDraft, withdrawCandidateApplication } from "../../api/recruiter";
+import {
+  fetchCandidateApplication,
+  fetchCandidateApplicationResumeFile,
+  submitCandidateApplication,
+  updateCandidateApplicationDraft,
+  withdrawCandidateApplication,
+} from "../../api/recruiter";
 import { ConfirmationDialog } from "../../components/common/ConfirmationDialog";
 import { EmptyState } from "../../components/common/EmptyState";
 import { LoadingSkeleton } from "../../components/common/LoadingSkeleton";
@@ -8,7 +14,7 @@ import { MatchScoreBreakdown } from "../../components/common/MatchScoreBreakdown
 import { PageHeader } from "../../components/common/PageHeader";
 import { StatusBadge } from "../../components/common/StatusBadge";
 import { useToast } from "../../context/ToastContext";
-import { formatDate, formatDateTime, resolveAssetUrl } from "../../lib/utils";
+import { formatDate, formatDateTime } from "../../lib/utils";
 import type { ApplicationRecord, AssessmentInvitation, Interview, Job } from "../../types";
 
 interface ApplicationDetailState {
@@ -86,6 +92,17 @@ export function CandidateApplicationDetailsPage() {
     }
   }
 
+  async function handleOpenSubmittedResume() {
+    try {
+      const blob = await fetchCandidateApplicationResumeFile(applicationId);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      showToast("We couldn't open the submitted resume.", "error");
+    }
+  }
+
   if (loading) {
     return <LoadingSkeleton className="h-96" />;
   }
@@ -152,9 +169,9 @@ export function CandidateApplicationDetailsPage() {
               </div>
               <div className="rounded-3xl bg-slate-50 p-4 sm:col-span-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Resume</p>
-                <a className="mt-2 inline-flex text-sm font-semibold text-tide" href={resolveAssetUrl(data.application.resumeUrl)} rel="noreferrer" target="_blank">
+                <button className="mt-2 inline-flex text-sm font-semibold text-tide" onClick={handleOpenSubmittedResume} type="button">
                   Open submitted resume
-                </a>
+                </button>
               </div>
             </div>
 

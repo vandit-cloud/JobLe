@@ -9,7 +9,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 
 const loginSchema = z.object({
-  role: z.enum(["recruiter", "candidate"]),
+  role: z.enum(["recruiter", "candidate", "admin"]),
   email: z.string().email("Enter a valid email"),
   password: z.string().min(8, "Enter your password"),
 });
@@ -27,9 +27,12 @@ const SEEDED_CREDENTIALS = {
   },
 } as const;
 
+type QuickAccessRole = keyof typeof SEEDED_CREDENTIALS;
+
 const DEFAULT_REDIRECTS = {
   recruiter: "/recruiter/dashboard",
   candidate: "/candidate/dashboard",
+  admin: "/admin/resume-security",
 } as const;
 
 function getSafeRedirectPath(role: LoginValues["role"], from?: string) {
@@ -39,6 +42,10 @@ function getSafeRedirectPath(role: LoginValues["role"], from?: string) {
 
   if (role === "candidate") {
     return from.startsWith("/candidate") ? from : DEFAULT_REDIRECTS.candidate;
+  }
+
+  if (role === "admin") {
+    return from.startsWith("/admin") ? from : DEFAULT_REDIRECTS.admin;
   }
 
   return from === "/" || from.startsWith("/recruiter") ? from : DEFAULT_REDIRECTS.recruiter;
@@ -66,7 +73,7 @@ export function LoginPage() {
   });
   const selectedRole = watch("role");
 
-  async function handleQuickAccess(role: LoginValues["role"]) {
+  async function handleQuickAccess(role: QuickAccessRole) {
     try {
       setLoading(true);
       await login({
@@ -88,7 +95,14 @@ export function LoginPage() {
       setLoading(true);
       await login(values);
       const nextPath = getSafeRedirectPath(values.role, location.state?.from);
-      showToast(values.role === "candidate" ? "Candidate login successful." : "Welcome back to the recruiter console.", "success");
+      showToast(
+        values.role === "candidate"
+          ? "Candidate login successful."
+          : values.role === "admin"
+            ? "Admin login successful."
+            : "Welcome back to the recruiter console.",
+        "success",
+      );
       navigate(nextPath, { replace: true });
     } catch (error) {
       showToast("Login failed. Please check your credentials.", "error");
@@ -126,9 +140,11 @@ export function LoginPage() {
         </section>
 
         <section className="glass-panel p-8 lg:p-10">
-          <h2 className="text-2xl font-bold text-ink">{selectedRole === "candidate" ? "Candidate login" : "Recruiter login"}</h2>
+          <h2 className="text-2xl font-bold text-ink">
+            {selectedRole === "candidate" ? "Candidate login" : selectedRole === "admin" ? "Admin login" : "Recruiter login"}
+          </h2>
           <p className="mt-2 text-sm text-slate-600">
-            Use a local seeded account for development or your own {selectedRole === "candidate" ? "candidate" : "recruiter"} credentials.
+            Use a local seeded account for development or your own {selectedRole === "candidate" ? "candidate" : selectedRole === "admin" ? "admin" : "recruiter"} credentials.
           </p>
 
           <form className="mt-8 space-y-5" onSubmit={handleSubmit(onSubmit)}>
@@ -139,6 +155,7 @@ export function LoginPage() {
               <select className="input" id="role" {...register("role")}>
                 <option value="recruiter">Recruiter</option>
                 <option value="candidate">Candidate</option>
+                <option value="admin">Admin</option>
               </select>
             </div>
 
@@ -159,7 +176,13 @@ export function LoginPage() {
             </div>
 
             <button className="btn-primary w-full" disabled={loading} type="submit">
-              {loading ? "Signing in..." : selectedRole === "candidate" ? "Sign in to candidate dashboard" : "Sign in to recruiter dashboard"}
+              {loading
+                ? "Signing in..."
+                : selectedRole === "candidate"
+                  ? "Sign in to candidate dashboard"
+                  : selectedRole === "admin"
+                    ? "Sign in to security review"
+                    : "Sign in to recruiter dashboard"}
             </button>
           </form>
 

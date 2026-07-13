@@ -3,6 +3,7 @@ import { CandidateLayout } from "./components/layout/CandidateLayout";
 import { RecruiterLayout } from "./components/layout/RecruiterLayout";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { RoleHomeRedirect } from "./routes/RoleHomeRedirect";
+import { AdminResumeSecurityPage } from "./pages/admin/AdminResumeSecurityPage";
 import { AssessmentIntroPage } from "./pages/candidate/AssessmentIntroPage";
 import { AssessmentInstructionsPage } from "./pages/candidate/AssessmentInstructionsPage";
 import { AssessmentProfileReviewPage } from "./pages/candidate/AssessmentProfileReviewPage";
@@ -21,6 +22,7 @@ import { CandidateNotificationsPage } from "./pages/candidate/CandidateNotificat
 import { CandidatePrivacyPage } from "./pages/candidate/CandidatePrivacyPage";
 import { CandidateProfilePage } from "./pages/candidate/CandidateProfilePage";
 import { CandidateResumePage } from "./pages/candidate/CandidateResumePage";
+import { CandidateSkillPassportPage } from "./pages/candidate/CandidateSkillPassportPage";
 import { ApplicantDetailsPage } from "./pages/recruiter/ApplicantDetailsPage";
 import { ApplicantsPage } from "./pages/recruiter/ApplicantsPage";
 import { AssessmentBuilderPage } from "./pages/recruiter/AssessmentBuilderPage";
@@ -50,6 +52,7 @@ import { ShortlistedPage } from "./pages/recruiter/ShortlistedPage";
 import { CheckoutPage } from "./pages/CheckoutPage";
 import { SubscriptionOverviewPage } from "./pages/recruiter/SubscriptionOverviewPage";
 import { SubscriptionUsagePage } from "./pages/recruiter/SubscriptionUsagePage";
+import { TalentPoolPage } from "./pages/recruiter/TalentPoolPage";
 
 export default function App() {
   return (
@@ -88,6 +91,7 @@ export default function App() {
           <Route path="/recruiter/assessment-results/:attemptId" element={<AssessmentResultDetailPage />} />
           <Route path="/recruiter/question-bank" element={<QuestionBankPage />} />
           <Route path="/recruiter/applicants" element={<ApplicantsPage />} />
+          <Route path="/recruiter/talent-pool" element={<TalentPoolPage />} />
           <Route path="/recruiter/applicants/:applicationId" element={<ApplicantDetailsPage />} />
           <Route path="/recruiter/shortlisted" element={<ShortlistedPage />} />
           <Route path="/recruiter/interviews" element={<InterviewsPage />} />
@@ -102,6 +106,7 @@ export default function App() {
           <Route path="/candidate/dashboard" element={<CandidateDashboardPage />} />
           <Route path="/candidate/profile" element={<CandidateProfilePage />} />
           <Route path="/candidate/resume" element={<CandidateResumePage />} />
+          <Route path="/candidate/skill-passport" element={<CandidateSkillPassportPage />} />
           <Route path="/candidate/applications" element={<CandidateApplicationsPage />} />
           <Route path="/candidate/applications/:applicationId" element={<CandidateApplicationDetailsPage />} />
           <Route path="/candidate/assessments" element={<CandidateAssessmentsPage />} />
@@ -112,6 +117,9 @@ export default function App() {
           <Route path="/candidate/notifications" element={<CandidateNotificationsPage />} />
           <Route path="/candidate/privacy" element={<CandidatePrivacyPage />} />
         </Route>
+      </Route>
+      <Route element={<ProtectedRoute role="admin" />}>
+        <Route path="/admin/resume-security" element={<AdminResumeSecurityPage />} />
       </Route>
     </Routes>
   );

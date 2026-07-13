@@ -7,13 +7,16 @@ import { AssessmentInvitation } from "../models/AssessmentInvitation.js";
 import { IntegrityEvent } from "../models/IntegrityEvent.js";
 import { Job } from "../models/Job.js";
 import { QuestionBankItem } from "../models/QuestionBankItem.js";
+import { Resume } from "../models/Resume.js";
 import { generateAssessmentQuestions } from "../services/aiService.js";
+import { canRecruiterAccessCandidateResume } from "../services/candidatePrivacyAccessService.js";
 import { sendAssessmentInvitation, sendAssessmentInvitationCancelled, sendAssessmentInvitationResent } from "../services/emailService.js";
 import { createAuditLog } from "../services/auditService.js";
 import { enforcePlanLimit, recordUsage } from "../services/planLimitService.js";
 import { ApiError } from "../utils/apiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { buildPaginatedResponse, getPagination } from "../utils/pagination.js";
+import { buildSignedResumeUrl, createResumeAccessToken } from "../utils/resumeAccessToken.js";
 import { resolveStoredResumePath } from "../utils/resumeStorage.js";
 
 function toObjectId(value) {
@@ -571,6 +574,51 @@ export const getAssessmentIntegrity = asyncHandler(async (req, res) => {
   });
 });
 
+export const getAssessmentResumeSignedUrl = asyncHandler(async (req, res) => {
+  const attempt = await AssessmentAttempt.findOne({
+    _id: req.params.attemptId,
+    organizationId: req.user.companyId,
+  });
+
+  if (!attempt) {
+    throw new ApiError(404, "Assessment result not found");
+  }
+
+  const resume = await Resume.findOne({ resumeUrl: attempt.candidateProfile?.resumeUrl, candidateId: attempt.candidateId });
+  if (!resume || resume.securityStatus !== "CLEAN" || resume.confirmationStatus !== "CONFIRMED" || resume.storageZone !== "clean") {
+    throw new ApiError(403, "This resume is not available for recruiter access.");
+  }
+  const privacyAllowed = await canRecruiterAccessCandidateResume({
+    candidateId: attempt.candidateId,
+    recruiterId: req.user.recruiterId,
+    companyId: req.user.companyId,
+  });
+  if (!privacyAllowed) {
+    throw new ApiError(403, "Candidate privacy settings do not allow resume access.");
+  }
+
+  const token = createResumeAccessToken({
+    resumeId: resume._id.toString(),
+    actorRole: "recruiter",
+    actorId: String(req.user.recruiterId || req.user.userId || ""),
+    attemptId: attempt._id.toString(),
+    reasonCode: "ASSESSMENT_RESULT_RELATIONSHIP",
+  });
+
+  resume.securityEvents.push({
+    eventType: "Signed URL generated",
+    status: resume.securityStatus,
+    reasonCode: "ASSESSMENT_RESULT_RELATIONSHIP",
+    createdAt: new Date(),
+  });
+  await resume.save();
+
+  res.json({
+    signedUrl: buildSignedResumeUrl(req, token),
+    expiresInSeconds: 300,
+  });
+});
+
 export const streamAssessmentResume = asyncHandler(async (req, res) => {
   const attempt = await AssessmentAttempt.findOne({
     _id: req.params.attemptId,
@@ -579,6 +627,19 @@ export const streamAssessmentResume = asyncHandler(async (req, res) => {
 
   if (!attempt) {
     throw new ApiError(404, "Assessment result not found");
+  }
+
+  const resume = await Resume.findOne({ resumeUrl: attempt.candidateProfile?.resumeUrl, candidateId: attempt.candidateId });
+  if (resume && (resume.securityStatus !== "CLEAN" || resume.confirmationStatus !== "CONFIRMED" || resume.storageZone !== "clean")) {
+    throw new ApiError(403, "This resume is not available for recruiter access.");
+  }
+  const privacyAllowed = await canRecruiterAccessCandidateResume({
+    candidateId: attempt.candidateId,
+    recruiterId: req.user.recruiterId,
+    companyId: req.user.companyId,
+  });
+  if (!privacyAllowed) {
+    throw new ApiError(403, "Candidate privacy settings do not allow resume access.");
   }
 
   const absolutePath = resolveStoredResumePath(attempt.candidateProfile?.resumeUrl);
@@ -590,5 +651,25 @@ export const streamAssessmentResume = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Resume file not found");
   }
 
+  if (resume) {
+    resume.accessLog.push({
+      actorRole: "recruiter",
+      actorId: String(req.user.recruiterId || req.user.userId || ""),
+      action: "recruiter_viewed_assessment_resume",
+      ipAddress: String(req.ip || req.headers["x-forwarded-for"] || req.socket?.remoteAddress || ""),
+      reasonCode: "ASSESSMENT_RESULT_RELATIONSHIP",
+      accessedAt: new Date(),
+    });
+    resume.securityEvents.push({
+      eventType: "Recruiter viewed resume",
+      status: resume.securityStatus,
+      reasonCode: "ASSESSMENT_RESULT_RELATIONSHIP",
+      createdAt: new Date(),
+    });
+    await resume.save();
+  }
+
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
   res.sendFile(absolutePath);
 });

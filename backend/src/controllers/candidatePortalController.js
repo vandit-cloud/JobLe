@@ -1,3 +1,4 @@
+import fs from "fs";
 import { analyzeCandidateMatch } from "../services/aiService.js";
 import { Application } from "../models/Application.js";
 import { AssessmentAttempt } from "../models/AssessmentAttempt.js";
@@ -11,6 +12,7 @@ import { SavedJob } from "../models/SavedJob.js";
 import { ApiError } from "../utils/apiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { buildPaginatedResponse, getPagination } from "../utils/pagination.js";
+import { resolveStoredResumePath } from "../utils/resumeStorage.js";
 
 function computeProfileCompletion(candidate) {
   const checks = [
@@ -425,6 +427,27 @@ export const getCandidateApplicationById = asyncHandler(async (req, res) => {
     })),
     timeline: buildApplicationTimeline(application, interviews, invitations),
   });
+});
+
+export const streamCandidateApplicationResume = asyncHandler(async (req, res) => {
+  const application = await Application.findOne({
+    _id: req.params.applicationId,
+    candidateId: req.user.candidateId,
+  });
+
+  if (!application) {
+    throw new ApiError(404, "Application not found");
+  }
+
+  const absolutePath = resolveStoredResumePath(application.resumeUrl);
+  if (!absolutePath || !fs.existsSync(absolutePath)) {
+    throw new ApiError(404, "Resume file not found");
+  }
+
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
+  res.setHeader("Cache-Control", "private, max-age=0, no-store");
+  res.sendFile(absolutePath);
 });
 
 export const createCandidateApplication = asyncHandler(async (req, res) => {

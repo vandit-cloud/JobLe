@@ -11,6 +11,7 @@ import {
   generateDraftQuestions,
   getAssessmentById,
   getAssessmentIntegrity,
+  getAssessmentResumeSignedUrl,
   getAssessmentResultById,
   getAssessmentResults,
   getAssessments,
@@ -66,6 +67,7 @@ router.post("/assessment-invitations/:invitationId/resend", resendInvitation);
 
 router.get("/assessment-results", validate(assessmentResultQuerySchema, "query"), getAssessmentResults);
 router.get("/assessment-results/:attemptId", getAssessmentResultById);
+router.get("/assessment-results/:attemptId/resume/signed-url", getAssessmentResumeSignedUrl);
 router.get("/assessment-results/:attemptId/resume/file", streamAssessmentResume);
 router.patch("/assessment-results/:attemptId/review", validate(resultReviewSchema), reviewAssessmentResult);
 router.patch("/assessment-results/:attemptId/score", validate(resultScoreAdjustmentSchema), adjustAssessmentScore);

@@ -5,12 +5,15 @@ import { AssessmentAttempt } from "../models/AssessmentAttempt.js";
 import { AssessmentInvitation } from "../models/AssessmentInvitation.js";
 import { Candidate } from "../models/Candidate.js";
 import { IntegrityEvent } from "../models/IntegrityEvent.js";
-import { extractResumeProfile } from "../services/aiService.js";
+import { assertFailedUploadLimit, recordFailedResumeUpload } from "../services/resumeAbuseProtectionService.js";
+import { extractResumeProfileInWorker } from "../services/resumeProcessingWorkerService.js";
 import { sendAssessmentSubmitted } from "../services/emailService.js";
 import { enforcePlanLimit, recordUsage } from "../services/planLimitService.js";
 import { runCodeSubmission } from "../services/codeExecutionService.js";
 import { ApiError } from "../utils/apiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { inspectResumeUpload } from "../utils/resumeUploadInspection.js";
+import { buildResumeStorageUrl, getResumeStorageDir } from "../utils/resumeStorage.js";
 
 async function getInvitationByToken(invitationToken) {
   const invitation = await AssessmentInvitation.findOne({ invitationToken }).populate("assessmentId jobId candidateId");
@@ -93,6 +96,16 @@ function scoreAttempt(assessment, attempt) {
   };
 }
 
+function moveAssessmentResumeFile(sourcePath, zone) {
+  if (!sourcePath || !fs.existsSync(sourcePath)) {
+    return "";
+  }
+
+  const destinationPath = path.join(getResumeStorageDir(zone), path.basename(sourcePath));
+  fs.renameSync(sourcePath, destinationPath);
+  return destinationPath;
+}
+
 export const getCandidateAssessmentContext = asyncHandler(async (req, res) => {
   const invitation = await getInvitationByToken(req.params.invitationToken);
   const assessment = invitation.assessmentId;
@@ -147,8 +160,26 @@ export const uploadCandidateResume = asyncHandler(async (req, res) => {
     resourceType: "resumeAnalyses",
     message: "Your resume analysis limit has been reached.",
   });
-  const profile = await extractResumeProfile({
-    filename: req.file.filename,
+  const ipAddress = req.ip || req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "";
+  assertFailedUploadLimit(ipAddress);
+  const inspection = await inspectResumeUpload({
+    filePath: req.file.path,
+    filename: req.file.originalname,
+    mimeType: req.file.mimetype,
+  });
+
+  if (inspection.rejected) {
+    recordFailedResumeUpload(ipAddress);
+    moveAssessmentResumeFile(req.file.path, "rejected");
+    throw new ApiError(400, inspection.rejectionMessage || "This file failed our security checks. Please upload a new PDF or DOCX resume.");
+  }
+
+  const cleanPath = moveAssessmentResumeFile(req.file.path, "clean");
+  const resumeUrl = buildResumeStorageUrl("clean", path.basename(cleanPath || req.file.filename));
+  const profile = await extractResumeProfileInWorker({
+    filename: req.file.originalname || req.file.filename,
+    filePath: cleanPath,
+    mimeType: req.file.mimetype,
     requiredSkills: invitation.assessmentId.resumeMatchSettings?.requiredSkills || [],
   });
   invitation.status = "Resume Submitted";
@@ -162,7 +193,7 @@ export const uploadCandidateResume = asyncHandler(async (req, res) => {
   res.json({
     profile: {
       ...profile,
-      resumeUrl: `/uploads/resumes/${req.file.filename}`,
+      resumeUrl,
     },
     warning: "Protected personal characteristics are excluded from resume matching.",
   });
@@ -428,4 +459,3 @@ export const getCandidateAssessments = asyncHandler(async (req, res) => {
   }).populate("assessmentId");
   res.json({ items: attempts });
 });
-

@@ -626,9 +626,33 @@ export interface ResumeRecord {
   resumeUrl: string;
   mimeType: string;
   fileSize: number;
+  fileHash?: string;
+  pageCount?: number | null;
   isDefault: boolean;
+  storageZone?: "quarantine" | "clean" | "rejected" | "legacy";
+  securityStatus?: string;
+  confirmationStatus?: "PENDING" | "CONFIRMED";
+  rejectedReasonCode?: string;
+  sanitizedAt?: string | null;
   processingStatus: string;
   analysisStatus: string;
+  uploadWarnings?: string[];
+  uploadChecks?: {
+    mimeTypeValid?: boolean;
+    extensionValid?: boolean;
+    blockedExtension?: boolean;
+    magicBytesValid?: boolean;
+    fileSizeValid?: boolean;
+    filenameSafe?: boolean;
+    duplicateDetected?: boolean;
+    passwordProtectedPdf?: boolean;
+    corruptedFile?: boolean;
+    malwareScanStatus?: string;
+    suspiciousContentDetected?: boolean;
+    pageCountWarning?: boolean;
+    extractedTextAvailable?: boolean | null;
+  };
+  extractionError?: string;
   extractedData: Record<string, any>;
   confirmedData: Record<string, any>;
   analysis: {
@@ -637,6 +661,27 @@ export interface ResumeRecord {
     strengths?: string[];
     improvements?: string[];
     recommendedRoles?: string[];
+    roleRecommendations?: Array<{
+      roleTitle: string;
+      score: number;
+      matchingSkills: string[];
+      missingSkills: string[];
+      experienceReadiness: string;
+      recommendedAssessment?: {
+        assessmentId: string;
+        title: string;
+        experienceLevel?: string;
+        totalDuration?: number;
+      } | null;
+      suitableJobOpenings: Array<{
+        jobId: string;
+        title: string;
+        companyName: string;
+        location?: string;
+        workplaceType?: string;
+        matchScore: number;
+      }>;
+    }>;
     suggestedKeywords?: string[];
     updatedAt?: string;
   };
@@ -660,6 +705,111 @@ export interface CandidateSecuritySession {
   createdAt: string;
   lastActivityAt: string;
   isCurrent: boolean;
+}
+
+export interface SkillPassport {
+  _id: string;
+  candidateId: string;
+  confirmedSkills: Array<{
+    name: string;
+    category: string;
+    level: "Beginner" | "Intermediate" | "Advanced" | "Expert";
+  }>;
+  testPlan: {
+    testType: string;
+    durationMinutes: number;
+    sections: Array<{
+      title: string;
+      skill: string;
+      questionType: string;
+      questionCount: number;
+      durationMinutes: number;
+    }>;
+    generatedAt?: string;
+  };
+  currentTest?: {
+    status: "Not Started" | "In Progress" | "Submitted";
+    testType: string;
+    startedAt?: string;
+    submittedAt?: string;
+    questions: Array<{
+      questionId: string;
+      sectionTitle: string;
+      skill: string;
+      questionText: string;
+      options: Array<{ id: string; text: string }>;
+      marks: number;
+    }>;
+  };
+  result: {
+    overallScore: number;
+    level: string;
+    skillScores: Array<{ skill: string; score: number }>;
+    verifiedSkills: string[];
+    needsImprovement: string[];
+    badges: Array<{ title: string; skill: string; score: number; level: string }>;
+    publicVisible: boolean;
+    lastAssessedAt?: string;
+  };
+}
+
+export interface TalentPoolCandidate {
+  candidateId: string;
+  name: string;
+  professionalTitle?: string;
+  location?: string;
+  availability?: string;
+  expectedSalary?: number;
+  currency?: string;
+  experienceLevel: string;
+  yearsOfExperience: number;
+  assessmentDate?: string;
+  overallScore: number;
+  level: string;
+  skillScores: Array<{ skill: string; score: number }>;
+  badges: Array<{ title: string; skill: string; score: number; level: string }>;
+  verifiedSkills: string[];
+}
+
+export interface TalentInvitation {
+  id: string;
+  actionType: string;
+  message: string;
+  status: "Sent" | "Accepted" | "Rejected";
+  jobId?: string | null;
+  createdAt?: string;
+}
+
+export interface AdminResumeSecurityRecord {
+  id: string;
+  candidateId?: string;
+  originalName?: string;
+  fileSize?: number;
+  mimeType?: string;
+  fileHash?: string;
+  storageZone?: string;
+  securityStatus?: string;
+  confirmationStatus?: string;
+  rejectedReasonCode?: string;
+  uploadChecks?: Record<string, unknown>;
+  uploadWarnings?: string[];
+  latestSecurityEvent?: Record<string, unknown> | null;
+  accessLog?: Array<Record<string, unknown>>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AdminResumeSecurityReview {
+  rejectedResumes: AdminResumeSecurityRecord[];
+  malwareScanFailures: AdminResumeSecurityRecord[];
+  parserFailures: AdminResumeSecurityRecord[];
+  recentRecruiterAccess: AdminResumeSecurityRecord[];
+  highUploadVolumeAccounts: Array<{
+    _id: string;
+    uploads: number;
+    rejected: number;
+    latestUpload?: string;
+  }>;
 }
 
 export interface CandidateApplicationsResponse extends PaginatedResponse<ApplicationRecord> {
