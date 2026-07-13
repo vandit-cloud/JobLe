@@ -31,6 +31,37 @@ const passportQuestionSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const verificationPhotoSchema = new mongoose.Schema(
+  {
+    angle: { type: String, enum: ["front", "left", "right", "during-test"], required: true },
+    fileKey: String,
+    fileHash: String,
+    mimeType: String,
+    size: Number,
+    signature: { type: [Number], default: [] },
+    qualityScore: { type: Number, default: 0 },
+    livenessScore: { type: Number, default: 0 },
+    aiDecision: { type: String, enum: ["Passed", "Review Required", "Rejected"], default: "Review Required" },
+    issues: { type: [String], default: [] },
+    capturedAt: { type: Date, default: Date.now },
+  },
+  { _id: false },
+);
+
+const identityCheckSchema = new mongoose.Schema(
+  {
+    status: { type: String, enum: ["Passed", "Review Required", "Failed"], default: "Review Required" },
+    confidence: { type: Number, default: 0 },
+    matchedAngle: String,
+    fileKey: String,
+    fileHash: String,
+    signature: { type: [Number], default: [] },
+    issues: { type: [String], default: [] },
+    checkedAt: { type: Date, default: Date.now },
+  },
+  { _id: false },
+);
+
 const skillPassportSchema = new mongoose.Schema(
   {
     candidateId: {
@@ -70,10 +101,37 @@ const skillPassportSchema = new mongoose.Schema(
       testType: { type: String, default: "Standard Skill Test" },
       startedAt: Date,
       submittedAt: Date,
+      identityVerifiedAt: Date,
+      identityCheckStatus: { type: String, default: "Not Checked" },
       questions: {
         type: [passportQuestionSchema],
         default: [],
       },
+    },
+    identityVerification: {
+      status: {
+        type: String,
+        enum: ["Not Started", "Verified", "Review Required", "Rejected"],
+        default: "Not Started",
+      },
+      requiredAngles: {
+        type: [String],
+        default: ["front", "left", "right"],
+      },
+      photos: {
+        type: [verificationPhotoSchema],
+        default: [],
+      },
+      lastCheck: {
+        type: identityCheckSchema,
+        default: null,
+      },
+      checks: {
+        type: [identityCheckSchema],
+        default: [],
+      },
+      verifiedAt: Date,
+      updatedAt: Date,
     },
     result: {
       overallScore: { type: Number, default: 0 },

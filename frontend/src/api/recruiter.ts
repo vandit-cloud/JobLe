@@ -638,8 +638,33 @@ export async function startCandidateStandardSkillTest() {
   return response.data.passport;
 }
 
-export async function submitCandidateStandardSkillTest(answers: Record<string, string[]>) {
-  const response = await api.post<{ passport: SkillPassport }>("/candidate/skill-passport/submit-standard-test", { answers });
+export type CandidateVerificationImage = {
+  imageData: string;
+  signature: number[];
+  metrics: {
+    brightness: number;
+    contrast: number;
+    edgeScore: number;
+  };
+};
+
+export async function submitCandidateSkillIdentityVerification(photos: Record<"front" | "left" | "right", CandidateVerificationImage>) {
+  const response = await api.post<{ passport: SkillPassport }>("/candidate/skill-passport/identity-verification", { photos });
+  return response.data.passport;
+}
+
+export async function retakeCandidateSkillVerificationPhoto(angle: "front" | "left" | "right", image: CandidateVerificationImage) {
+  const response = await api.patch<{ passport: SkillPassport }>(`/candidate/skill-passport/identity-verification/${angle}`, { image });
+  return response.data.passport;
+}
+
+export async function recordCandidateSkillProctoringCheck(image: CandidateVerificationImage) {
+  const response = await api.post<{ check: NonNullable<SkillPassport["identityVerification"]>["lastCheck"] }>("/candidate/skill-passport/proctoring-check", { image });
+  return response.data.check;
+}
+
+export async function submitCandidateStandardSkillTest(answers: Record<string, string[]>, identityCheckImage: CandidateVerificationImage) {
+  const response = await api.post<{ passport: SkillPassport }>("/candidate/skill-passport/submit-standard-test", { answers, identityCheckImage });
   return response.data.passport;
 }
 

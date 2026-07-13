@@ -1,13 +1,13 @@
 import {
   Bell,
   BriefcaseBusiness,
+  Award,
   FileBadge2,
   FileUser,
   LayoutDashboard,
   LogOut,
   MenuSquare,
   ShieldCheck,
-  Sparkles,
   UserRound,
   WalletCards,
 } from "lucide-react";
@@ -19,7 +19,7 @@ const items = [
   { to: "/candidate/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/candidate/profile", label: "My Profile", icon: UserRound },
   { to: "/candidate/resume", label: "Resume", icon: FileBadge2 },
-  { to: "/candidate/skill-passport", label: "Skill Passport", icon: Sparkles },
+  { to: "/candidate/skill-result", label: "Skill Result", icon: Award },
   { to: "/jobs", label: "Browse Jobs", icon: BriefcaseBusiness },
   { to: "/candidate/applications", label: "My Applications", icon: FileUser },
   { to: "/candidate/assessments", label: "My Assessments", icon: MenuSquare },

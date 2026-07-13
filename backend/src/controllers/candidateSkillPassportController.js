@@ -1,10 +1,14 @@
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 import { Candidate } from "../models/Candidate.js";
 import { QuestionBankItem } from "../models/QuestionBankItem.js";
 import { Resume } from "../models/Resume.js";
 import { SkillPassport } from "../models/SkillPassport.js";
 import { ApiError } from "../utils/apiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { getSkillVerificationStorageRoot } from "../utils/skillVerificationStorage.js";
+import { compareVerificationImage, saveVerificationImage } from "../utils/skillVerificationStorage.js";
 
 const LEVELS = ["Beginner", "Intermediate", "Advanced", "Expert"];
 const CATEGORY_HINTS = {
@@ -36,6 +40,19 @@ function mapSafePassport(passport) {
   const object = passport.toObject();
   if (object.currentTest?.questions) {
     object.currentTest.questions = object.currentTest.questions.map(({ correctOptionIds: _correctOptionIds, ...question }) => question);
+  }
+  if (object.identityVerification?.photos) {
+    object.identityVerification.photos = object.identityVerification.photos.map(({ fileKey, fileHash: _fileHash, signature: _signature, ...photo }) => ({
+      ...photo,
+      previewUrl: fileKey ? `/api/candidate/skill-passport/identity-verification/${photo.angle}/preview` : "",
+    }));
+  }
+  if (object.identityVerification?.checks) {
+    object.identityVerification.checks = object.identityVerification.checks.map(({ fileKey: _fileKey, fileHash: _fileHash, signature: _signature, ...check }) => check);
+  }
+  if (object.identityVerification?.lastCheck) {
+    const { fileKey: _fileKey, fileHash: _fileHash, signature: _signature, ...lastCheck } = object.identityVerification.lastCheck;
+    object.identityVerification.lastCheck = lastCheck;
   }
   return object;
 }
@@ -178,10 +195,115 @@ export const updateCandidatePassportSkills = asyncHandler(async (req, res) => {
   res.json({ passport: mapSafePassport(passport) });
 });
 
+export const submitCandidateSkillVerification = asyncHandler(async (req, res) => {
+  const passport = await getOrCreatePassport(req.user.candidateId);
+  const photos = req.body.photos || {};
+  const requiredAngles = ["front", "left", "right"];
+  const missingAngles = requiredAngles.filter((angle) => !photos[angle]?.imageData || !photos[angle]?.signature);
+
+  if (missingAngles.length) {
+    throw new ApiError(400, "Capture front, left, and right verification photos before starting the test.", { missingAngles });
+  }
+
+  const savedPhotos = requiredAngles.map((angle) =>
+    saveVerificationImage({
+      candidateId: req.user.candidateId,
+      angle,
+      imageData: photos[angle].imageData,
+      signature: photos[angle].signature,
+      metrics: photos[angle].metrics || {},
+      prefix: "baseline",
+    }),
+  );
+  const hasReview = savedPhotos.some((photo) => photo.aiDecision !== "Passed");
+
+  if (!passport.identityVerification) {
+    passport.identityVerification = {};
+  }
+  passport.identityVerification.status = hasReview ? "Review Required" : "Verified";
+  passport.identityVerification.requiredAngles = requiredAngles;
+  passport.identityVerification.photos = savedPhotos;
+  passport.identityVerification.checks = [];
+  passport.identityVerification.lastCheck = null;
+  passport.identityVerification.verifiedAt = hasReview ? null : new Date();
+  passport.identityVerification.updatedAt = new Date();
+  await passport.save();
+
+  res.json({ passport: mapSafePassport(passport) });
+});
+
+export const retakeCandidateSkillVerificationPhoto = asyncHandler(async (req, res) => {
+  const passport = await getOrCreatePassport(req.user.candidateId);
+  const angle = String(req.params.angle || "").toLowerCase();
+  const requiredAngles = ["front", "left", "right"];
+
+  if (!requiredAngles.includes(angle)) {
+    throw new ApiError(400, "Verification angle must be front, left, or right.");
+  }
+  if (passport.currentTest?.status === "In Progress") {
+    throw new ApiError(400, "Verification photos cannot be retaken after the test has started.");
+  }
+  if (!req.body.image?.imageData || !req.body.image?.signature) {
+    throw new ApiError(400, "A fresh camera photo is required to retake this angle.");
+  }
+
+  const savedPhoto = saveVerificationImage({
+    candidateId: req.user.candidateId,
+    angle,
+    imageData: req.body.image.imageData,
+    signature: req.body.image.signature,
+    metrics: req.body.image.metrics || {},
+    prefix: "baseline",
+  });
+
+  if (!passport.identityVerification) {
+    passport.identityVerification = {};
+  }
+
+  const existingPhotos = (passport.identityVerification.photos || []).filter((photo) => photo.angle !== angle);
+  const nextPhotos = [...existingPhotos, savedPhoto].sort((left, right) => requiredAngles.indexOf(left.angle) - requiredAngles.indexOf(right.angle));
+  const hasAllRequiredAngles = requiredAngles.every((requiredAngle) => nextPhotos.some((photo) => photo.angle === requiredAngle));
+  const hasReview = nextPhotos.some((photo) => photo.aiDecision !== "Passed");
+
+  passport.identityVerification.requiredAngles = requiredAngles;
+  passport.identityVerification.photos = nextPhotos;
+  passport.identityVerification.status = hasAllRequiredAngles ? (hasReview ? "Review Required" : "Verified") : "Not Started";
+  passport.identityVerification.verifiedAt = passport.identityVerification.status === "Verified" ? new Date() : null;
+  passport.identityVerification.updatedAt = new Date();
+  passport.identityVerification.lastCheck = null;
+  passport.identityVerification.checks = [];
+  await passport.save();
+
+  res.json({ passport: mapSafePassport(passport) });
+});
+
+export const streamCandidateSkillVerificationPhoto = asyncHandler(async (req, res) => {
+  const passport = await getOrCreatePassport(req.user.candidateId);
+  const angle = String(req.params.angle || "").toLowerCase();
+  const photo = (passport.identityVerification?.photos || []).find((item) => item.angle === angle);
+  if (!photo?.fileKey) {
+    throw new ApiError(404, "Verification photo not found.");
+  }
+
+  const root = getSkillVerificationStorageRoot();
+  const filePath = path.resolve(root, photo.fileKey);
+  if (!filePath.startsWith(root) || !fs.existsSync(filePath)) {
+    throw new ApiError(404, "Verification photo not found.");
+  }
+
+  res.setHeader("Content-Type", photo.mimeType || "image/jpeg");
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.sendFile(filePath);
+});
+
 export const startCandidateStandardSkillTest = asyncHandler(async (req, res) => {
   const passport = await getOrCreatePassport(req.user.candidateId);
   if (!passport.confirmedSkills.length) {
     throw new ApiError(400, "Confirm skills before starting the standard skill test.");
+  }
+  if (passport.identityVerification?.status !== "Verified") {
+    throw new ApiError(403, "Complete front, left, and right identity verification before starting the skill test.");
   }
 
   passport.testPlan = buildTestPlan(passport.confirmedSkills);
@@ -189,6 +311,8 @@ export const startCandidateStandardSkillTest = asyncHandler(async (req, res) => 
     status: "In Progress",
     testType: "Standard Skill Test",
     startedAt: new Date(),
+    identityVerifiedAt: passport.identityVerification.verifiedAt || new Date(),
+    identityCheckStatus: "Baseline Verified",
     questions: await buildQuestionsFromPlan(passport.testPlan),
   };
   await passport.save();
@@ -196,11 +320,58 @@ export const startCandidateStandardSkillTest = asyncHandler(async (req, res) => 
   res.json({ passport: mapSafePassport(passport) });
 });
 
+export const recordCandidateSkillProctoringCheck = asyncHandler(async (req, res) => {
+  const passport = await getOrCreatePassport(req.user.candidateId);
+  if (passport.currentTest?.status !== "In Progress") {
+    throw new ApiError(400, "No active standard skill test found.");
+  }
+  if (passport.identityVerification?.status !== "Verified") {
+    throw new ApiError(403, "Identity verification is required before live proctoring checks.");
+  }
+
+  const image = req.body.image;
+  if (!image?.imageData || !image?.signature) {
+    throw new ApiError(400, "A live camera image is required for this proctoring check.");
+  }
+
+  const identityCheck = compareVerificationImage({
+    candidateId: req.user.candidateId,
+    imageData: image.imageData,
+    signature: image.signature,
+    metrics: image.metrics || {},
+    baselinePhotos: passport.identityVerification.photos || [],
+  });
+  passport.identityVerification.lastCheck = identityCheck;
+  passport.identityVerification.checks = [...(passport.identityVerification.checks || []), identityCheck].slice(-25);
+  passport.currentTest.identityCheckStatus = identityCheck.status;
+  await passport.save();
+
+  res.json({ check: mapSafePassport(passport).identityVerification.lastCheck });
+});
+
 export const submitCandidateStandardSkillTest = asyncHandler(async (req, res) => {
   const passport = await getOrCreatePassport(req.user.candidateId);
   if (passport.currentTest?.status !== "In Progress") {
     throw new ApiError(400, "No active standard skill test found.");
   }
+  if (passport.identityVerification?.status !== "Verified") {
+    throw new ApiError(403, "Identity verification is required before submitting this skill test.");
+  }
+
+  const identityCheckImage = req.body.identityCheckImage;
+  if (!identityCheckImage?.imageData || !identityCheckImage?.signature) {
+    throw new ApiError(400, "A live camera identity check is required before submitting this skill test.");
+  }
+
+  const identityCheck = compareVerificationImage({
+    candidateId: req.user.candidateId,
+    imageData: identityCheckImage.imageData,
+    signature: identityCheckImage.signature,
+    metrics: identityCheckImage.metrics || {},
+    baselinePhotos: passport.identityVerification.photos || [],
+  });
+  passport.identityVerification.lastCheck = identityCheck;
+  passport.identityVerification.checks = [...(passport.identityVerification.checks || []), identityCheck].slice(-25);
 
   const answers = req.body.answers || {};
   const questionScores = passport.currentTest.questions.map((question) => {
@@ -242,11 +413,12 @@ export const submitCandidateStandardSkillTest = asyncHandler(async (req, res) =>
     verifiedSkills: skillScores.filter((item) => item.score >= 60).map((item) => item.skill),
     needsImprovement: skillScores.filter((item) => item.score < 60).map((item) => item.skill),
     badges,
-    publicVisible: true,
+    publicVisible: identityCheck.status === "Passed",
     lastAssessedAt: new Date(),
   };
   passport.currentTest.status = "Submitted";
   passport.currentTest.submittedAt = new Date();
+  passport.currentTest.identityCheckStatus = identityCheck.status;
   await passport.save();
 
   res.json({ passport: mapSafePassport(passport) });

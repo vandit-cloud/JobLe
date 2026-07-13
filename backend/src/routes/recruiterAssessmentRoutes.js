@@ -1,5 +1,12 @@
 import { Router } from "express";
 import {
+  getRecruiterIdentityReport,
+  requestCandidateExplanation,
+  requestIdentityRetest,
+  reviewRecruiterIdentityReport,
+  streamSignedIdentityImage,
+} from "../controllers/assessmentIdentityVerificationController.js";
+import {
   adjustAssessmentScore,
   cancelInvitation,
   createAssessment,
@@ -67,6 +74,11 @@ router.post("/assessment-invitations/:invitationId/resend", resendInvitation);
 
 router.get("/assessment-results", validate(assessmentResultQuerySchema, "query"), getAssessmentResults);
 router.get("/assessment-results/:attemptId", getAssessmentResultById);
+router.get("/assessment-results/:attemptId/identity-report", getRecruiterIdentityReport);
+router.patch("/assessment-results/:attemptId/identity-report/review", reviewRecruiterIdentityReport);
+router.post("/assessment-results/:attemptId/identity-report/request-retest", requestIdentityRetest);
+router.post("/assessment-results/:attemptId/identity-report/request-explanation", requestCandidateExplanation);
+router.get("/identity-verification/image/:token", streamSignedIdentityImage);
 router.get("/assessment-results/:attemptId/resume/signed-url", getAssessmentResumeSignedUrl);
 router.get("/assessment-results/:attemptId/resume/file", streamAssessmentResume);
 router.patch("/assessment-results/:attemptId/review", validate(resultReviewSchema), reviewAssessmentResult);

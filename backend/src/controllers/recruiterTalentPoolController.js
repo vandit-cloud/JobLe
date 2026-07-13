@@ -129,7 +129,7 @@ export const inviteTalentCandidate = asyncHandler(async (req, res) => {
       message,
       relatedEntityType: job ? "job" : "skill-passport",
       relatedEntityId: job?._id?.toString() || passport._id.toString(),
-      actionUrl: job ? `/jobs/${job._id}` : "/candidate/skill-passport",
+      actionUrl: job ? `/jobs/${job._id}` : "/candidate/resume/skill-passport",
       read: false,
     });
   }

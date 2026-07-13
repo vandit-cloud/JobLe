@@ -11,7 +11,7 @@ AI extracts skills
 System generates or selects test based on resume skills
         ↓
 Candidate gives test
-        ↓
+        ↓       
 Candidate gets verified skill result
         ↓
 Companies can see candidate result

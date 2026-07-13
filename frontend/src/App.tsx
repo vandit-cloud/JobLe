@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { CandidateLayout } from "./components/layout/CandidateLayout";
 import { RecruiterLayout } from "./components/layout/RecruiterLayout";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
@@ -23,6 +23,8 @@ import { CandidatePrivacyPage } from "./pages/candidate/CandidatePrivacyPage";
 import { CandidateProfilePage } from "./pages/candidate/CandidateProfilePage";
 import { CandidateResumePage } from "./pages/candidate/CandidateResumePage";
 import { CandidateSkillPassportPage } from "./pages/candidate/CandidateSkillPassportPage";
+import { CandidateSkillResultPage } from "./pages/candidate/CandidateSkillResultPage";
+import { CandidateSkillTestPage } from "./pages/candidate/CandidateSkillTestPage";
 import { ApplicantDetailsPage } from "./pages/recruiter/ApplicantDetailsPage";
 import { ApplicantsPage } from "./pages/recruiter/ApplicantsPage";
 import { AssessmentBuilderPage } from "./pages/recruiter/AssessmentBuilderPage";
@@ -106,7 +108,13 @@ export default function App() {
           <Route path="/candidate/dashboard" element={<CandidateDashboardPage />} />
           <Route path="/candidate/profile" element={<CandidateProfilePage />} />
           <Route path="/candidate/resume" element={<CandidateResumePage />} />
-          <Route path="/candidate/skill-passport" element={<CandidateSkillPassportPage />} />
+          <Route path="/candidate/resume/skill-passport" element={<CandidateSkillPassportPage />} />
+          <Route path="/candidate/resume/skill-passport/test" element={<CandidateSkillTestPage />} />
+          <Route path="/candidate/skill-result" element={<CandidateSkillResultPage />} />
+          <Route path="/candidate/resume/skill-passport/result" element={<Navigate to="/candidate/skill-result" replace />} />
+          <Route path="/candidate/skill-passport" element={<Navigate to="/candidate/resume/skill-passport" replace />} />
+          <Route path="/candidate/skill-passport/test" element={<Navigate to="/candidate/resume/skill-passport/test" replace />} />
+          <Route path="/candidate/skill-passport/result" element={<Navigate to="/candidate/skill-result" replace />} />
           <Route path="/candidate/applications" element={<CandidateApplicationsPage />} />
           <Route path="/candidate/applications/:applicationId" element={<CandidateApplicationDetailsPage />} />
           <Route path="/candidate/assessments" element={<CandidateAssessmentsPage />} />

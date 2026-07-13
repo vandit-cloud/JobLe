@@ -1,11 +1,11 @@
 import { Award, CheckCircle2, ClipboardCheck, Mail, Plus, Sparkles, Trash2, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   fetchCandidateTalentInvitations,
   fetchCandidateSkillPassport,
   respondToTalentInvitation,
   startCandidateStandardSkillTest,
-  submitCandidateStandardSkillTest,
   updateCandidateSkillPassportSkills,
 } from "../../api/recruiter";
 import { EmptyState } from "../../components/common/EmptyState";
@@ -20,13 +20,13 @@ const LEVELS = ["Beginner", "Intermediate", "Advanced", "Expert"] as const;
 const CATEGORIES = ["Frontend", "Backend", "Database", "Tools", "General"] as const;
 
 export function CandidateSkillPassportPage() {
+  const navigate = useNavigate();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [passport, setPassport] = useState<SkillPassport | null>(null);
   const [invitations, setInvitations] = useState<TalentInvitation[]>([]);
   const [skills, setSkills] = useState<SkillPassport["confirmedSkills"]>([]);
-  const [answers, setAnswers] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     Promise.all([fetchCandidateSkillPassport(), fetchCandidateTalentInvitations()])
@@ -54,16 +54,18 @@ export function CandidateSkillPassportPage() {
   }
 
   async function startTest() {
-    const updated = await startCandidateStandardSkillTest();
-    setPassport(updated);
-    setAnswers({});
-    showToast("Standard skill test started.", "success");
-  }
-
-  async function submitTest() {
-    const updated = await submitCandidateStandardSkillTest(answers);
-    setPassport(updated);
-    showToast("Skill passport verified.", "success");
+    try {
+      if (passport?.identityVerification?.status !== "Verified") {
+        navigate("/candidate/resume/skill-passport/test");
+        return;
+      }
+      if (passport.currentTest?.status !== "In Progress") {
+        await startCandidateStandardSkillTest();
+      }
+      navigate("/candidate/resume/skill-passport/test");
+    } catch {
+      showToast("Confirm at least one skill before starting the test.", "error");
+    }
   }
 
   async function respondToInvitation(invitationId: string, response: "Accepted" | "Rejected") {
@@ -82,18 +84,16 @@ export function CandidateSkillPassportPage() {
     return <EmptyState title="Skill passport unavailable" description="Upload and confirm your resume data first, then return here." />;
   }
 
-  const currentQuestions = passport.currentTest?.status === "In Progress" ? passport.currentTest.questions : [];
-
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Verified skills"
         title="Skill Passport"
-        description="Confirm resume skills, take a standardized skill test, and publish recruiter-visible verification badges."
+        description="Resume workspace page for confirming skills, taking a standardized skill test, and publishing recruiter-visible verification badges."
         action={
           <button className="btn-primary" onClick={startTest} type="button">
             <ClipboardCheck className="h-4 w-4" />
-            Start standard test
+            {passport.currentTest?.status === "In Progress" ? "Continue standard test" : "Start standard test"}
           </button>
         }
       />
@@ -177,39 +177,6 @@ export function CandidateSkillPassportPage() {
         </div>
       </div>
 
-      {currentQuestions.length ? (
-        <div className="glass-panel p-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-tide">Step 3</p>
-          <h2 className="mt-2 text-2xl font-bold text-ink">Standard skill test</h2>
-          <div className="mt-5 space-y-4">
-            {currentQuestions.map((question, index) => (
-              <div key={question.questionId} className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-500">{question.sectionTitle}</p>
-                <h3 className="mt-2 text-base font-bold text-ink">{index + 1}. {question.questionText}</h3>
-                <div className="mt-3 grid gap-2">
-                  {question.options.map((option) => (
-                    <label key={option.id} className="flex cursor-pointer items-center gap-3 rounded-xl bg-white px-3 py-2 text-sm text-slate-700">
-                      <input
-                        checked={(answers[question.questionId] || []).includes(option.id)}
-                        name={question.questionId}
-                        onChange={() => setAnswers((current) => ({ ...current, [question.questionId]: [option.id] }))}
-                        type="radio"
-                      />
-                      {option.text}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-5">
-            <button className="btn-primary" onClick={submitTest} type="button">
-              Submit skill test
-            </button>
-          </div>
-        </div>
-      ) : null}
-
       {passport.result?.overallScore ? (
         <div className="glass-panel p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -217,7 +184,12 @@ export function CandidateSkillPassportPage() {
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-tide">Candidate Skill Passport</p>
               <h2 className="mt-2 text-2xl font-bold text-ink">Verified result</h2>
             </div>
-            <MatchScoreBadge score={passport.result.overallScore} />
+            <div className="flex flex-wrap items-center gap-3">
+              <MatchScoreBadge score={passport.result.overallScore} />
+              <Link className="btn-secondary" to="/candidate/skill-result">
+                View result
+              </Link>
+            </div>
           </div>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             {passport.result.skillScores.map((item) => (

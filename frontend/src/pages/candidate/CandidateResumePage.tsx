@@ -310,6 +310,24 @@ export function CandidateResumePage() {
         </div>
       </div>
 
+      <div className="glass-panel flex flex-wrap items-center gap-3 p-5">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-tide">Resume workspace</p>
+          <p className="mt-1 text-sm text-slate-600">Skill Passport, test, and result now live inside the Resume area.</p>
+        </div>
+        <div className="ml-auto flex flex-wrap gap-3">
+          <Link className="btn-secondary" to="/candidate/resume/skill-passport">
+            Skill passport
+          </Link>
+          <Link className="btn-secondary" to="/candidate/resume/skill-passport/test">
+            Skill test
+          </Link>
+          <Link className="btn-secondary" to="/candidate/skill-result">
+            Skill result
+          </Link>
+        </div>
+      </div>
+
       {uploadFeedback ? (
         <div className="glass-panel border border-sky-100 bg-sky-50/70 p-5 text-sky-900">
           <div className="flex items-start gap-3">
@@ -399,7 +417,7 @@ export function CandidateResumePage() {
                     Review extracted data
                   </button>
                   {selectedResumeIsApplicationReady ? (
-                    <Link className="btn-primary" to="/candidate/skill-passport">
+                    <Link className="btn-primary" to="/candidate/resume/skill-passport">
                       Build skill passport
                     </Link>
                   ) : null}

@@ -732,6 +732,8 @@ export interface SkillPassport {
     testType: string;
     startedAt?: string;
     submittedAt?: string;
+    identityVerifiedAt?: string;
+    identityCheckStatus?: string;
     questions: Array<{
       questionId: string;
       sectionTitle: string;
@@ -739,6 +741,37 @@ export interface SkillPassport {
       questionText: string;
       options: Array<{ id: string; text: string }>;
       marks: number;
+    }>;
+  };
+  identityVerification?: {
+    status: "Not Started" | "Verified" | "Review Required" | "Rejected";
+    requiredAngles: string[];
+    verifiedAt?: string;
+    updatedAt?: string;
+    photos: Array<{
+      angle: "front" | "left" | "right" | "during-test";
+      previewUrl?: string;
+      mimeType?: string;
+      size?: number;
+      qualityScore: number;
+      livenessScore: number;
+      aiDecision: "Passed" | "Review Required" | "Rejected";
+      issues: string[];
+      capturedAt?: string;
+    }>;
+    lastCheck?: {
+      status: "Passed" | "Review Required" | "Failed";
+      confidence: number;
+      matchedAngle?: string;
+      issues: string[];
+      checkedAt?: string;
+    } | null;
+    checks?: Array<{
+      status: "Passed" | "Review Required" | "Failed";
+      confidence: number;
+      matchedAngle?: string;
+      issues: string[];
+      checkedAt?: string;
     }>;
   };
   result: {

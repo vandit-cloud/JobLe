@@ -1,5 +1,16 @@
 import { Router } from "express";
 import {
+  acceptCandidateIdentityConsent,
+  captureCandidateIdentityAngle,
+  completeCandidateIdentityLiveness,
+  completeCandidateIdentityVerification,
+  getCandidateIdentityStatus,
+  recordCandidateIdentityEvent,
+  recordCandidateIdentitySystemCheck,
+  requestAlternativeVerification,
+  submitCandidateIdentityExplanation,
+} from "../controllers/assessmentIdentityVerificationController.js";
+import {
   getCandidateAssessmentContext,
   getCandidateAssessmentResult,
   getCandidateAssessments,
@@ -25,8 +36,12 @@ import {
 import {
   getCandidateSkillPassport,
   getCandidateTalentInvitations,
+  recordCandidateSkillProctoringCheck,
   respondToTalentInvitation,
+  retakeCandidateSkillVerificationPhoto,
   startCandidateStandardSkillTest,
+  streamCandidateSkillVerificationPhoto,
+  submitCandidateSkillVerification,
   submitCandidateStandardSkillTest,
   updateCandidatePassportSkills,
 } from "../controllers/candidateSkillPassportController.js";
@@ -116,10 +131,23 @@ router.post("/resumes/:resumeId/analyze", analyzeCandidateResume);
 router.put("/resumes/:resumeId/confirm-extracted-data", validate(candidateResumeConfirmSchema), confirmCandidateResumeExtractedData);
 router.get("/skill-passport", getCandidateSkillPassport);
 router.put("/skill-passport/skills", updateCandidatePassportSkills);
+router.post("/skill-passport/identity-verification", submitCandidateSkillVerification);
+router.patch("/skill-passport/identity-verification/:angle", retakeCandidateSkillVerificationPhoto);
+router.get("/skill-passport/identity-verification/:angle/preview", streamCandidateSkillVerificationPhoto);
 router.post("/skill-passport/start-standard-test", startCandidateStandardSkillTest);
+router.post("/skill-passport/proctoring-check", recordCandidateSkillProctoringCheck);
 router.post("/skill-passport/submit-standard-test", submitCandidateStandardSkillTest);
 router.get("/skill-passport/invitations", getCandidateTalentInvitations);
 router.patch("/skill-passport/invitations/:invitationId/respond", respondToTalentInvitation);
+router.get("/assessments/:attemptId/identity/status", getCandidateIdentityStatus);
+router.post("/assessments/:attemptId/identity/consent", acceptCandidateIdentityConsent);
+router.post("/assessments/:attemptId/identity/system-check", recordCandidateIdentitySystemCheck);
+router.post("/assessments/:attemptId/identity/capture-:angle", captureCandidateIdentityAngle);
+router.post("/assessments/:attemptId/identity/liveness", completeCandidateIdentityLiveness);
+router.post("/assessments/:attemptId/identity/complete", completeCandidateIdentityVerification);
+router.post("/assessments/:attemptId/identity/event", recordCandidateIdentityEvent);
+router.post("/assessments/:attemptId/identity/alternative-request", requestAlternativeVerification);
+router.post("/assessments/:attemptId/identity/explanation", submitCandidateIdentityExplanation);
 router.get("/saved-jobs", getSavedJobs);
 router.post("/saved-jobs/:jobId", saveJob);
 router.delete("/saved-jobs/:jobId", removeSavedJob);
