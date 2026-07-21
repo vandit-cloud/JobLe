@@ -758,8 +758,11 @@ export type CandidateVerificationImage = {
     contrast: number;
     edgeScore: number;
     cameraCovered?: boolean;
+    faceCenterX?: number;
+    faceSymmetry?: number;
     faceVisible?: boolean;
     frozenFrame?: boolean;
+    horizontalBalance?: number;
     onlyOneFaceVisible?: boolean;
     reviewSignals?: string[];
   };
